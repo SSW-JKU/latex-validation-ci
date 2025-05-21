@@ -63,4 +63,4 @@ runs:
         echo "Python version: ${{ inputs.python_version }}"
         echo "TeX Live version: ${{ inputs.texlive_version }}"
         echo "TeX Live packages: ${{ inputs.texlive_packages }}"
-        echo "::set-output name=sample_output::Sample output"
+        echo "sample_output=Sample output" >> $GITHUB_OUTPUT
