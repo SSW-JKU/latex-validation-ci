@@ -116,7 +116,9 @@ runs:
         echo "Changed Files:"
         echo ${{ steps.filter.outputs.changed_files }}
 
-    # **************************** lint_changed_texs *********************************
+    # ************************************************************************************
+    # ***************************** lint_changed_texs ************************************
+    # ************************************************************************************
 
     - name: Create symbolic link for lint_texs.py
       run: ln -s ${{ github.action_path }}/scripts/lint_texs.py
@@ -167,7 +169,6 @@ runs:
       with:
         script: |
           var pr_number = ${{ github.event.pull_request.number }}
-          pr_number = ${{ inputs.pr_number }}
           const artifactID = '${{ steps.artifact-upload-step.outputs.artifact-id }}'
           const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
           const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
