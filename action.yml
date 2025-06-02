@@ -38,14 +38,6 @@ inputs:
     description: "Ltex-plus version to use"
     required: false
     default: "18.5.1"
-  ltex_plus_dir:
-    description: "Path to ltex-plus executable."
-    required: false
-    default: "ltex-ls-plus-18.5.1/bin/ltex-cli-plus"
-  spelling_report_folder:
-    description: "Relative path where html-chktex-lint-reports (captured console output) is saved intermediately."
-    required: false
-    default: "ltex_reports"
   chktex_version:
     description: "CHKTEX version to use"
     required: false
@@ -126,7 +118,6 @@ runs:
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' }}
-      #if: ${{ github.event.inputs.lint_pr_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
          sudo apt install colorized-logs
@@ -217,6 +208,47 @@ runs:
             body: commentBody,
           });
           console.log(`Comment created.`)
+
+    # ****************************************************************************************
+    # ********************************* spellcheck_changed_texs ******************************
+    # ****************************************************************************************
+
+    # Install required java
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    # Define the URL of the .tar.gz file
+    - name: Set .tar.gz file URL
+      shell: bash
+      run: |
+        echo "ltex-plus version: ${{ inputs.ltex_plus_version }}"
+        echo "LTEX_URL=https://github.com/ltex-plus/ltex-ls-plus/releases/download/${{ inputs.ltex_plus_version }}/ltex-ls-plus-${{ inputs.ltex_plus_version }}-linux-x64.tar.gz" >> $GITHUB_ENV
+
+    # Restore the cache
+    - name: Restore .tar.gz file cache
+      id: cache-ltex
+      uses: actions/cache@v3
+      with:
+        path: ltex-ls-plus-${{ inputs.ltex_plus_version }}
+        key: ltex-${{ inputs.ltex_plus_version }}
+
+    # Download and extract the .tar.gz file if not cached
+    - name: Download .tar.gz file
+      if: steps.cache-ltex.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        # Download and extract LTEX LS
+        wget $LTEX_URL
+        tar -xvzf ltex-ls-plus-${{ inputs.ltex_plus_version }}-linux-x64.tar.gz -C .
+        rm ltex-ls-plus-${{ inputs.ltex_plus_version }}-linux-x64.tar.gz
+
+    - name: Set ltex-plus and spelling reports path
+      shell: bash
+      run: |
+        echo "LTEX_PLUS_DIR=ltex-ls-plus-${{ inputs.ltex_plus_version }}/bin/ltex-cli-plus" >> $GITHUB_ENV
+        echo "SPELLING_REPORT_FOLDER=.github/scripts/test_exercise_files/ltex_reports" >> $GITHUB_ENV
 
     # ****************************************************************************************
     # ********************************** test dummy section **********************************
