@@ -18,6 +18,10 @@ inputs:
     required: false
     default: >-
       scheme-basic
+  build_config:
+    description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
+    required: false
+    default: '.lecture-build-ci.json'
   lint_pr_comment_with_zipped_report:
     description: 'For linting: create PR-comment with chktex-reports packaged as zip'
     required: false
@@ -123,7 +127,7 @@ runs:
     - name: Lint check (chktex)
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles ${{ steps.filter.outputs.changed_files }} --config "$GITHUB_REPOSITORY.lecture-build-ci.json" --workdir . --lint_pr_comment_with_zipped_report "${{ inputs.lint_pr_comment_with_zipped_report}}" --lint_summary "false"
+        python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles ${{ steps.filter.outputs.changed_files }} --config "$GITHUB_REPOSITORY/${{ inputs.build_config }}" --workdir . --lint_pr_comment_with_zipped_report "${{ inputs.lint_pr_comment_with_zipped_report}}" --lint_summary "false"
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured chktex console-output)
