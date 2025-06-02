@@ -127,6 +127,8 @@ runs:
     - name: Lint check (chktex)
       shell: bash
       run: |
+        chmod +x ${{ github.workspace }}/chktex/chktex
+        chmod +x ${{ github.workspace }}/chktexrc.in
         python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir . --lint_pr_comment_with_zipped_report "${{ inputs.lint_pr_comment_with_zipped_report}}" --lint_summary "false"
 
     # Upload the ZIP file as an artifact
