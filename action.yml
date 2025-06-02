@@ -25,7 +25,7 @@ inputs:
   lint_pr_comment_with_zipped_report:
     description: 'For linting: create PR-comment with chktex-reports packaged as zip'
     required: false
-    default: 'true'
+    default: 'false'
   lint_pr_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For linting: create chktex-report as GITHUB_STEP_SUMMARY'
     required: false
@@ -37,15 +37,15 @@ inputs:
   spellcheck_comment_with_zipped_report:
     description: 'For spell checking: create PR-comment with ltex-reports packaged as zip'
     required: false
-    default: 'true'
+    default: 'false'
   spellcheck_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For spell checking: create ltex-report as GITHUB_STEP_SUMMARY'
     required: false
-    default: 'false'
+    default: 'true'
   spellcheck_comment_with_md_report:
     description: 'For spell checking: create ltex-report (md file) and post as PR-comment'
     required: false
-    default: 'false'
+    default: 'true'
   spellcheck_comment_with_md_report_and_comment_in_code:
     description: 'For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment'
     required: false
@@ -316,7 +316,56 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
-          rm -rf .github/scripts/test_exercise_files/ltex_reports
+          rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
+
+    # --------------------------------------- Post md-report as pr-comment ---------------------------------------
+
+    # Spell check with ltex-plus and save into folder ltex_reports
+    - name: Spell check with ltex (WRITE_MD_REPORT_AS_PR_COMMENT)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Post Chktex-Lint report (md file) as PR-comment
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        file-path: ./spell_check_report.md
+
+    # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
+
+    - name: Spell check with ltex (GITHUB_STEP_SUMMARY)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+
+    - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      shell: bash
+      run: |
+          cat spell_check_report.md >> $GITHUB_STEP_SUMMARY
+
+    # Create a pull request review comment (with the step summary link)
+    - name: Post PR comment (wit GITHUB_STEP_SUMMARY link)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runId = process.env.GITHUB_RUN_ID;
+          const prNumber = process.env.GITHUB_REF.split('/')[2];
+          const summaryUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`;
+          const commentBody = `The spell checking process found a total of ${process.env.TOTAL_SPELLINGCHECK_WARNINGS} warnings. The ltex-plus report is available for download: [Summary: Spell-check check with ltex](${summaryUrl})`;
+          const { data: comment } = await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: commentBody,
+          });
+          console.log(`Comment created.`)
 
     # ******************************************************************************************************************
     # ********************************************* test dummy section *************************************************
