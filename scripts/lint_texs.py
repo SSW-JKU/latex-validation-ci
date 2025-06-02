@@ -18,8 +18,8 @@ already_checked_files = set()
 nr_of_total_warnings_for_zip = 0
 nr_of_total_warnings_for_md_file = 0
 
-CHKTEX_EXEC_REL_PATH = '.github/scripts/test_exercise_files/chktex/chktex'
-CHKTEX_CONFIG_FILE_REL_PATH = '.github/scripts/test_exercise_files/chktexrc.in'
+CHKTEX_EXEC_REL_PATH = 'chktex/chktex'
+CHKTEX_CONFIG_FILE_REL_PATH = 'chktexrc.in'
 
 
 class LintNotification:
@@ -161,6 +161,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
 
     # Retrieve the value of GITHUB_WORKSPACE
     github_workspace = os.getenv('GITHUB_WORKSPACE')
+    github_action_workspace = os.getenv('GITHUB_ACTION_PATH')
 
     # Check if the environment variable is set
     if github_workspace:
@@ -169,12 +170,18 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     else:
         print('GITHUB_WORKSPACE is not set.')  # runs locally
         base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+    if github_action_workspace:
+        print(f'GITHUB_ACTION_PATH is set to: {github_action_workspace}')
+        action_base_dir = github_action_workspace
+    else:
+        print('GITHUB_ACTION_PATH is not set.')  # runs locally
+        action_base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
 
     tex_file_abs_path = os.path.join(base_dir, tex_file_path)
     print(f'tex-file: {tex_file_abs_path}')
-    config_file_abs_path = os.path.join(base_dir, CHKTEX_CONFIG_FILE_REL_PATH)
+    config_file_abs_path = os.path.join(action_base_dir, CHKTEX_CONFIG_FILE_REL_PATH)
     print(f'config-file: {config_file_abs_path}')
-    chktex_path = os.path.join(base_dir, CHKTEX_EXEC_REL_PATH)
+    chktex_path = os.path.join(action_base_dir, CHKTEX_EXEC_REL_PATH)
     print(f'chktex: {chktex_path}')
 
     # Create report file path
