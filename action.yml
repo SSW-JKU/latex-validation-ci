@@ -18,6 +18,10 @@ inputs:
     required: false
     default: >-
       scheme-basic
+  pr_number:
+    description: "pr-number"
+    required: false
+    default: "default"
   build_config:
     description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
     required: false
@@ -162,6 +166,8 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
+          const pr_number = ${{ github.event.pull_request.number }}
+          pr_number = ${{ inputs.pr_number }}
           const artifactID = '${{ steps.artifact-upload-step.outputs.artifact-id }}'
           const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
           const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
