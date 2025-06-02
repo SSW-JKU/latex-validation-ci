@@ -158,7 +158,6 @@ runs:
 
     # Create a pull request review comment (with the artifact link)
     - name: Post PR comment (with link to zip artifact)
-      working-directory: ${{}}
       if: ${{ steps.filter.outputs.changed }} && ${{ inputs.lint_pr_comment_with_zipped_report == 'true' }}
       uses: actions/github-script@v7
       with:
