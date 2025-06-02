@@ -167,16 +167,12 @@ runs:
           const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
           const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
           const { data: comment } = await github.rest.issues.createComment({
-            owner: targetRepoOwner,
-            repo: targetRepoName,
-            issue_number: prNumber,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
             body: commentBody
           });
           console.log(`Comment created: ${artifactUrl}`)
-      env:
-        targetRepoOwner: ${{ github.event.repository.owner }}
-        targetRepoName: ${{ github.event.repository.name }}
-        prNumber: ${{ github.event.number }}
 
     # Delete all html reports (chktex_reports)
     - name: Delete all files in chktex_reports
