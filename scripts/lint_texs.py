@@ -237,7 +237,7 @@ def main():
     # Define input argument parser
     log.info("Start check.")
     parser = argparse.ArgumentParser()
-    parser.add_argument('-cf', '--changedfiles', type=list, required=True, help="Paths to changed files to be linted.")
+    parser.add_argument('-cf', '--changedfiles', required=True, help="Paths to changed files to be linted.")
     parser.add_argument('-c', '--config', required=True, help="Config for CI/CD pipeline, likely .lecture-build-ci.json")
     parser.add_argument('-wd', '--workdir', required=True, help="Working directory, likely repo root.")
     parser.add_argument('--lint_pr_comment_with_zipped_report', required=True, type=str_to_bool, nargs='?', const=True,
