@@ -1,0 +1,37 @@
+name: Test spelling exercises (dorny)
+
+on:
+  workflow_call:
+    inputs:
+      lint_pr_comment_with_zipped_report:
+        description: 'For linting: create PR-comment with chktex-reports packaged as zip'
+        required: false
+        type: 'boolean'
+        default: 'false'
+jobs:
+  check_ci_changes:
+    permissions:
+      # Required to upload/save artifact, otherwise you'll get
+      # "Error: Resource not accessible by integration"
+      contents: write
+      # Required to post comment, otherwise you'll get
+      # "Error: Resource not accessible by integration"
+      pull-requests: write
+    runs-on: ubuntu-latest
+    outputs:
+      files_changed: ${{ steps.filter.outputs.changed }}
+      files_changed_list: ${{ steps.filter.outputs.changed_files }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          list-files: 'json'
+          filters: |
+            changed:
+              - added|modified: '*SS/**/*.tex'
+              - added|modified: '*WS/**/*.tex'
+      #- name: Print changed files
+      - run: |
+          echo "Changed Files:"
+          echo ${{ steps.filter.outputs.changed_files }}

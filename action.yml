@@ -66,21 +66,12 @@ runs:
         echo "TeX Live packages: ${{ inputs.texlive_packages }}"
         echo "GITHUB_ACTION_PATH: $GITHUB_ACTION_PATH"
         echo "$GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
-        parent_dir=$(dirname "$GITHUB_ACTION_PATH")
-        echo "cropped: $parent_dir"
 
         echo "$GITHUB_ACTION_PATH/scripts/lint_texs.py"
         if [ -f "$GITHUB_ACTION_PATH/scripts/lint_texs.py" ]; then
           echo "File exists (using GITHUB_ACTION_PATH)."
         else
           echo "File does not exist (using GITHUB_ACTION_PATH)."
-        fi
-
-        echo "$parent_dir/scripts/lint_texs.py"
-        if [ -f "$parent_dir/scripts/lint_texs.py" ]; then
-          echo "File exists (using parent_dir)."
-        else
-          echo "File does not exist (using parent_dir)."
         fi
 
         echo "sample_output=Sample output" >> $GITHUB_OUTPUT
