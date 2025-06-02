@@ -29,7 +29,7 @@ inputs:
   lint_pr_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For linting: create chktex-report as GITHUB_STEP_SUMMARY'
     required: false
-    default: 'true'
+    default: 'false'
   lint_pr_comment_with_md_report:
     description: 'For linting: create chktex-report (md file) and post as PR-comment'
     required: false
@@ -37,7 +37,7 @@ inputs:
   spellcheck_comment_with_zipped_report:
     description: 'For spell checking: create PR-comment with ltex-reports packaged as zip'
     required: false
-    default: 'false'
+    default: 'true'
   spellcheck_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For spell checking: create ltex-report as GITHUB_STEP_SUMMARY'
     required: false
@@ -279,14 +279,14 @@ runs:
 
     # Spell check with ltex-plus and save into folder ltex_reports
     - name: Spell check with ltex (ZIPP_CONSOLE_REPORT)
-      if: ${{ env.spellcheck_comment_with_zipped_report == 'true' }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
         python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
-      if: ${{ env.spellcheck_comment_with_zipped_report == 'true' }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       id: artifact-upload-ltex-report-step
       uses: actions/upload-artifact@v4
       with:
