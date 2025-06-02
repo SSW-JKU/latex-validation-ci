@@ -41,15 +41,15 @@ inputs:
   spellcheck_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For spell checking: create ltex-report as GITHUB_STEP_SUMMARY'
     required: false
-    default: 'true'
+    default: 'false'
   spellcheck_comment_with_md_report:
     description: 'For spell checking: create ltex-report (md file) and post as PR-comment'
     required: false
-    default: 'true'
+    default: 'false'
   spellcheck_comment_with_md_report_and_comment_in_code:
     description: 'For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment'
     required: false
-    default: 'false'
+    default: 'true'
   ltex_plus_version:
     description: "Ltex-plus version to use"
     required: false
