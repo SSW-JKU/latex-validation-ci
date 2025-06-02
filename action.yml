@@ -18,6 +18,11 @@ inputs:
     required: false
     default: >-
       scheme-basic
+  ltex_plus_version:
+    description: "Ltex-plus version to use"
+    required: false
+    default: "18.5.1"
+
 outputs:
   sample_output:
     description: "Sample output"
@@ -45,7 +50,9 @@ runs:
     #   run: |
     #     python -m pip install --upgrade pip
     #     pip install --upgrade setuptools
-    #     pip install -r requirements.txt
+    #     pip install PyGithub
+    #     pip install beautifulsoup4
+    #
 
     # TODO: if you also need texlive, you can use this step
     # # install TeX live + install required dependencies
@@ -55,8 +62,32 @@ runs:
     #     version: ${{ inputs.texlive_version }}
     #     packages: ${{ inputs.texlive_packages }}
 
-    - name: Try calling reusable workflow
-      uses: SSW-JKU/latex-validation-ci/.github/workflows/test.yml@main
+    #- name: Try calling reusable workflow
+    #  uses: SSW-JKU/latex-validation-ci/.github/workflows/test.yml@main
+
+    # ******************************* check_ci_changes *********************************
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        list-files: 'json'
+        filters: |
+          changed:
+            - added|modified: '*SS/**/*.tex'
+            - added|modified: '*WS/**/*.tex'
+
+    - name: Print changed files
+      shell: bash
+      run: |
+        echo "Changed Files:"
+        echo ${{ steps.filter.outputs.changed_files }}
+
+    # **************************** lint_changed_texs *********************************
+
+    - name: Create symbolic link for lint_texs.py
+      run: ln -s ${{ github.action_path }}/scripts/lint_texs.py
+      shell: bash
+
+    # **************************** test dummy section ********************************
 
     # just print the input and set a new output
     - name: Dummy
