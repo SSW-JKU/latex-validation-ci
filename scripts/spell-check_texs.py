@@ -6,13 +6,12 @@ import argparse
 import logging as log
 import subprocess
 import os
+import requests
 from typing import List
 
-import requests
 from github import Github
 from pathlib import Path
 
-sys.path.append('.github/scripts/build_exercise_files')
 from config import Config
 from summary_md_file import SummaryMdFile
 from tex_checks_utils import count_total_warnings
@@ -26,7 +25,7 @@ choices = {
     'make_report_for_github_summary_opt': 'WRITE_MD_REPORT_AS_GITHUB_SUMMARY'
 }
 
-CONFIG_FILE_REL_PATH = '.github/scripts/test_exercise_files/ltex_config.txt'
+CONFIG_FILE_REL_PATH = 'ltex_config.txt'
 
 
 class SpellingNotification:
@@ -267,6 +266,7 @@ def use_ltex(tex_file_path, option, changedlines):
 
     # Retrieve the value of GITHUB_WORKSPACE
     github_workspace = os.getenv('GITHUB_WORKSPACE')
+    github_action_workspace = os.getenv('GITHUB_ACTION_PATH')
 
     # Check if the environment variable is set
     if github_workspace:
@@ -275,11 +275,17 @@ def use_ltex(tex_file_path, option, changedlines):
     else:
         print('GITHUB_WORKSPACE is not set.')  # runs locally
         base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+    if github_action_workspace:
+        print(f'GITHUB_ACTION_PATH is set to: {github_action_workspace}')
+        action_base_dir = github_action_workspace
+    else:
+        print('GITHUB_ACTION_PATH is not set.')  # runs locally
+        action_base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
 
     # Create paths to tex file, ltex executable and ltex config file
     tex_file_abs_path = os.path.join(base_dir, tex_file_path)
     log.info(f'tex-file: {tex_file_abs_path}')
-    config_file_abs_path = os.path.join(base_dir, CONFIG_FILE_REL_PATH)
+    config_file_abs_path = os.path.join(action_base_dir, CONFIG_FILE_REL_PATH)
     log.info(f'config-file: {config_file_abs_path}')
     ltex_dir = os.getenv('LTEX_PLUS_DIR')
     if not ltex_dir:

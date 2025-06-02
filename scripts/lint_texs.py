@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import ast
-import json
 import re
 import argparse
 import logging as log

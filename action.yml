@@ -34,10 +34,30 @@ inputs:
     description: 'For linting: create chktex-report (md file) and post as PR-comment'
     required: false
     default: 'false'
+  spellcheck_comment_with_zipped_report:
+    description: 'For spell checking: create PR-comment with ltex-reports packaged as zip'
+    required: false
+    default: 'false'
+  spellcheck_comment_with_link_to_GITHUB_SUMMARY:
+    description: 'For spell checking: create ltex-report as GITHUB_STEP_SUMMARY'
+    required: false
+    default: 'false'
+  spellcheck_comment_with_md_report:
+    description: 'For spell checking: create ltex-report (md file) and post as PR-comment'
+    required: false
+    default: 'false'
+  spellcheck_comment_with_md_report_and_comment_in_code:
+    description: 'For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment'
+    required: false
+    default: 'false'
   ltex_plus_version:
     description: "Ltex-plus version to use"
     required: false
     default: "18.5.1"
+  spelling_report_folder:
+    description: "Relative path where html-ltex-spell-check-reports (captured console output) is saved intermediately."
+    required: false
+    default: "ltex_reports"
   chktex_version:
     description: "CHKTEX version to use"
     required: false
@@ -117,7 +137,7 @@ runs:
 
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' }}
+      if: ${{ steps.filter.outputs.changed == 'true' && (inputs.lint_pr_comment_with_zipped_report == 'true' || inputs.spellcheck_comment_with_zipped_report == 'true') }}
       shell: bash
       run: |
          sudo apt install colorized-logs
@@ -215,12 +235,14 @@ runs:
 
     # Install required java
     - uses: actions/setup-java@v4
+      if: ${{ steps.filter.outputs.changed == 'true' }}
       with:
         distribution: 'temurin'
         java-version: '21'
 
     # Define the URL of the .tar.gz file
     - name: Set .tar.gz file URL
+      if: ${{ steps.filter.outputs.changed == 'true' }}
       shell: bash
       run: |
         echo "ltex-plus version: ${{ inputs.ltex_plus_version }}"
@@ -228,6 +250,7 @@ runs:
 
     # Restore the cache
     - name: Restore .tar.gz file cache
+      if: ${{ steps.filter.outputs.changed == 'true' }}
       id: cache-ltex
       uses: actions/cache@v3
       with:
@@ -236,7 +259,7 @@ runs:
 
     # Download and extract the .tar.gz file if not cached
     - name: Download .tar.gz file
-      if: steps.cache-ltex.outputs.cache-hit != 'true'
+      if: ${{ steps.filter.outputs.changed == 'true' && steps.cache-ltex.outputs.cache-hit != 'true'}}
       shell: bash
       run: |
         # Download and extract LTEX LS
@@ -245,10 +268,30 @@ runs:
         rm ltex-ls-plus-${{ inputs.ltex_plus_version }}-linux-x64.tar.gz
 
     - name: Set ltex-plus and spelling reports path
+      if: ${{ steps.filter.outputs.changed == 'true' }}
       shell: bash
       run: |
         echo "LTEX_PLUS_DIR=ltex-ls-plus-${{ inputs.ltex_plus_version }}/bin/ltex-cli-plus" >> $GITHUB_ENV
-        echo "SPELLING_REPORT_FOLDER=.github/scripts/test_exercise_files/ltex_reports" >> $GITHUB_ENV
+        echo "SPELLING_REPORT_FOLDER=${{ inputs.spelling_report_folder }}" >> $GITHUB_ENV
+
+
+    # --------------------------------------- Capture console output into html-report ---------------------------------------
+
+    # Spell check with ltex-plus and save into folder ltex_reports
+    - name: Spell check with ltex (ZIPP_CONSOLE_REPORT)
+      if: ${{ env.spellcheck_comment_with_zipped_report == 'true' }}
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+
+    # Upload the ZIP file as an artifact
+    - name: Upload ZIP artifact (captured ltex console-output (color-coded))
+      if: ${{ env.spellcheck_comment_with_zipped_report == 'true' }}
+      id: artifact-upload-step
+      uses: actions/upload-artifact@v4
+      with:
+        name: ltex_reports
+        path: ${{ env.SPELLING_REPORT_FOLDER }}
 
     # ****************************************************************************************
     # ********************************** test dummy section **********************************
