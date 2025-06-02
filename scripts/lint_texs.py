@@ -1,11 +1,10 @@
 #!/usr/bin/env python
+import json
 import re
-import sys
 import argparse
 import logging as log
 import subprocess
 import os
-import ast
 
 from pathlib import Path
 
@@ -251,10 +250,10 @@ def main():
     config_file = Config(args)
     create_zipped_report = args.lint_pr_comment_with_zipped_report
     create_md_summary = args.lint_summary
-    log.info(f'Added/Modified tex-file: {args.changedfiles}')
+    log.info(f'Added/Modified tex-file: {json.loads(args.changedfiles)}')
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths = [p for p in ast.literal_eval(args.changedfiles) if config_file.active_semester in p]
+    filtered_paths = [p for p in json.loads(args.changedfiles) if config_file.active_semester in p]
     log.info(f'Changed tex-files from {config_file.active_semester}: {filtered_paths}')
 
     # Perform spell-check and provide result depending on lint_pr_comment_with_zipped_report and lint_summary
