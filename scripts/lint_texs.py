@@ -252,7 +252,6 @@ def main():
     create_zipped_report = args.lint_pr_comment_with_zipped_report
     create_md_summary = args.lint_summary
     log.info(f'Added/Modified tex-file: {args.changedfiles}')
-    log.info(f'lint_pr_comment_with_zipped_report: {create_zipped_report}, lint_summary: {create_md_summary}')
 
     # Filter paths that contain the specific directory defined in config in their path
     filtered_paths = [p for p in ast.literal_eval(args.changedfiles) if config_file.active_semester in p]
