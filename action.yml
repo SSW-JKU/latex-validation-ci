@@ -55,9 +55,6 @@ runs:
     #     version: ${{ inputs.texlive_version }}
     #     packages: ${{ inputs.texlive_packages }}
 
-    - name: Try calling reusable workflow with GITHUB_ACTION_PAH
-      uses: $GITHUB_ACTION_PATH/.github/workflows/test.yml
-
     - name: Try calling reusable workflow
       uses: ./.github/workflows/test.yml
 
