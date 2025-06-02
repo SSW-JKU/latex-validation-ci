@@ -10,19 +10,13 @@ on:
         default: 'false'
 jobs:
   check_ci_changes:
-    permissions:
-      # Required to upload/save artifact, otherwise you'll get
-      # "Error: Resource not accessible by integration"
-      contents: write
-      # Required to post comment, otherwise you'll get
-      # "Error: Resource not accessible by integration"
-      pull-requests: write
     runs-on: ubuntu-latest
-    outputs:
-      files_changed: ${{ steps.filter.outputs.changed }}
-      files_changed_list: ${{ steps.filter.outputs.changed_files }}
     steps:
       - uses: actions/checkout@v3
+
+      - run: echo "Start reusable workflow"
+
+      # Get changedtex  files
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -31,6 +25,7 @@ jobs:
             changed:
               - added|modified: '*SS/**/*.tex'
               - added|modified: '*WS/**/*.tex'
+
       #- name: Print changed files
       - run: |
           echo "Changed Files:"
