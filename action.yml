@@ -18,10 +18,6 @@ inputs:
     required: false
     default: >-
       scheme-basic
-  pr_number:
-    description: "pr-number"
-    required: false
-    default: "default"
   build_config:
     description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
     required: false
@@ -29,15 +25,15 @@ inputs:
   lint_pr_comment_with_zipped_report:
     description: 'For linting: create PR-comment with chktex-reports packaged as zip'
     required: false
-    default: 'true'
+    default: 'false'
   lint_pr_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For linting: create chktex-report as GITHUB_STEP_SUMMARY'
     required: false
-    default: 'false'
+    default: 'true'
   lint_pr_comment_with_md_report:
     description: 'For linting: create chktex-report (md file) and post as PR-comment'
     required: false
-    default: 'true'
+    default: 'false'
   ltex_plus_version:
     description: "Ltex-plus version to use"
     required: false
@@ -100,7 +96,10 @@ runs:
     #- name: Try calling reusable workflow
     #  uses: SSW-JKU/latex-validation-ci/.github/workflows/test.yml@main
 
-    # ******************************* check_ci_changes *********************************
+    # ****************************************************************************************
+    # *********************************** check_ci_changes ***********************************
+    # ****************************************************************************************
+
     - uses: dorny/paths-filter@v3
       id: filter
       with:
@@ -116,9 +115,9 @@ runs:
         echo "Changed Files:"
         echo ${{ steps.filter.outputs.changed_files }}
 
-    # ************************************************************************************
-    # ***************************** lint_changed_texs ************************************
-    # ************************************************************************************
+    # ****************************************************************************************
+    # ********************************* lint_changed_texs ************************************
+    # ****************************************************************************************
 
     - name: Create symbolic link for lint_texs.py
       run: ln -s ${{ github.action_path }}/scripts/lint_texs.py
@@ -168,7 +167,6 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
-          var pr_number = ${{ github.event.pull_request.number }}
           const artifactID = '${{ steps.artifact-upload-step.outputs.artifact-id }}'
           const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
           const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
@@ -194,7 +192,35 @@ runs:
       with:
         file-path: ./lint_summary.md
 
-    # **************************** test dummy section ********************************
+    # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
+
+    - name: Upload GITHUB_STEP_SUMMARY
+      if: ${{ steps.filter.outputs.changed }} && ${{ env.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      shell: bash
+      run: |
+        cat lint_summary.md >> $GITHUB_STEP_SUMMARY
+
+    # Create a pull request review comment (with the step summary link)
+    - name: Post PR comment (with GITHUB_STEP_SUMMARY link)
+      if: ${{ steps.filter.outputs.changed }} && ${{ inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runId = process.env.GITHUB_RUN_ID;
+          const prNumber = process.env.GITHUB_REF.split('/')[2];
+          const summaryUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`;
+          const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_REPORT} warnings. The chktex report is available for download: [Summary: Lint check with chktex](${summaryUrl})`;
+          const { data: comment } = await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ github.event.pull_request.number }},
+            body: commentBody,
+          });
+          console.log(`Comment created.`)
+
+    # ****************************************************************************************
+    # ********************************** test dummy section **********************************
+    # ****************************************************************************************
 
     # just print the input and set a new output
     - name: Dummy
