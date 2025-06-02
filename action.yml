@@ -371,6 +371,48 @@ runs:
           });
           console.log(`Comment created.`)
 
+    # ************************************ Comment directly in code and post remaining warnings as md-report as pr-comment ************************************************
+    # Retrieve diffs, gets changed lines, content, files etc.
+    - uses: GrantBirki/git-diff-action@v2.8.0
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      id: git-diff-action
+      with:
+        json_diff_file_output: diff.json
+        raw_diff_file_output: diff.txt
+        file_output_only: "true"
+
+    - name: Check if JSON diff file exists
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      shell: bash
+      run: |
+        if [ -f $GITHUB_WORKSPACE/diff.json ]; then
+          echo "File exists"
+        else
+          echo "File does not exist"
+          exit 1
+        fi
+
+    # Print the diff in JSON format
+    - name: Print json diff
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      shell: bash
+      run: cat $GITHUB_ACTION_PATH/diff.json
+
+    # Spell check with ltex-plus and save into folder ltex_reports
+    - name: Spell check with ltex (WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      shell: bash
+      run: |
+        python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --changedlines "$GITHUB_ACTION_PATH/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir .
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
+    - name: Post Chktex-Lint's remaining warnings (md file) as PR-comment
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        file-path: ./spell_check_report.md
+
     # ******************************************************************************************************************
     # ********************************************* test dummy section *************************************************
     # ******************************************************************************************************************
