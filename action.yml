@@ -56,7 +56,7 @@ runs:
     #     packages: ${{ inputs.texlive_packages }}
 
     - name: Try calling reusable workflow
-      uses: SSW-JKU/latex-validation-ci/.github/workflows/test.yml@v1
+      uses: SSW-JKU/latex-validation-ci/.github/workflows/test.yml@main
 
     # just print the input and set a new output
     - name: Dummy
