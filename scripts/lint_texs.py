@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import ast
 import json
 import re
 import argparse
@@ -253,7 +254,7 @@ def main():
     log.info(f'Added/Modified tex-file: {args.changedfiles}')
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths = [p for p in json.loads(args.changedfiles) if config_file.active_semester in p]
+    filtered_paths = [p for p in ast.literal_eval(args.changedfiles) if config_file.active_semester in p]
     log.info(f'Changed tex-files from {config_file.active_semester}: {filtered_paths}')
 
     # Perform spell-check and provide result depending on lint_pr_comment_with_zipped_report and lint_summary
