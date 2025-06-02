@@ -22,6 +22,7 @@ outputs:
   sample_output:
     description: "Sample output"
     value: ${{ steps.dummy.outputs.sample_output }}
+
 runs:
   using: "composite"
   steps:
@@ -63,4 +64,7 @@ runs:
         echo "Python version: ${{ inputs.python_version }}"
         echo "TeX Live version: ${{ inputs.texlive_version }}"
         echo "TeX Live packages: ${{ inputs.texlive_packages }}"
+        echo "GITHUB_ACTION_PATH: $GITHUB_ACTION_PATH"
+        echo "GITHUB_ACTION_REPOSITORY: $GITHUB_ACTION_REPOSITORY"
+        echo "$GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
         echo "sample_output=Sample output" >> $GITHUB_OUTPUT

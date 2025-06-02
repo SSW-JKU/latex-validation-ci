@@ -1,0 +1,78 @@
+{
+	"ltex.language": de-AT,
+	"ltex.dictionary": {"de-AT": [
+		".java-Datei",
+		"Compilezeitfehler",
+		"fettgeschrieben",
+		"int-Cast",
+		"int-Wert",
+		"Ganzzahlendivision",
+		"Ganzzahlendivisionsrest",
+		"Gleitkomma-",
+		"Gleitkommadivision",
+		"java",
+		"javac",
+		"JavaWiz-Extension",
+		"JavaWiz",
+		"Kompiliervorgang",
+		"main-Methode",
+		"Math-Paket",
+		"Moodle",
+		"nd",
+		"st",
+		"Stilrichtlinien",
+		"Stringverkettungen",
+		"th",
+		"UE",
+		"Pizzaschnitten",
+		"Zwischenvariablen"
+	],
+	"de-DE": [
+		".java-Datei",
+		"Compilezeitfehler",
+		"fettgeschrieben",
+		"int-Cast",
+		"int-Wert",
+		"Ganzzahlendivision",
+		"Ganzzahlendivisionsrest",
+		"Gleitkomma-",
+		"Gleitkommadivision",
+		"java",
+		"javac",
+		"JavaWiz-Extension",
+		"JavaWiz",
+		"Kompiliervorgang",
+		"main-Methode",
+		"Math-Paket",
+		"Moodle",
+		"nd",
+		"st",
+		"Stilrichtlinien",
+		"Stringverkettungen",
+		"th",
+		"UE",
+		"Pizzaschnitten",
+		"Zwischenvariablen"
+	]},
+	"ltex.hiddenFalsePositives": {
+		"de-AT": [
+			"{\"rule\": \"AUSTRIAN_GERMAN_SPELLER_RULE\", \"sentence\": \"(?:My\\\\w+|\\\\w+\\\\.\\\\S*\\\\b)|\\\\d+(st|nd|rd|th)|\\\\w*Math.\\\\w+|\\\\w+.java|\\\\b[a-z]\\\\w*[A-Z]\\\\w+\\\\b\"}"
+		]
+	},
+	"ltex.disabledRules": {"de-AT": [
+		"WAEHRUNGSANGABEN_KOMMA",
+		"KOMMA_STATT_PUNKT"
+	]},
+	"ltex.latex.commands": {
+		"\\label{}": "default",
+		"\\documentclass[]{}": "ignore",
+		"\\cite{}": "ignore",
+		"\\cite[]{}": "default",
+		"\\texttt{}": "default"
+	},
+	"ltex.latex.environments": {
+		"verbatim": "ignore",
+		"examplerun": "ignore",
+		"myminipage": "ignore"
+	}
+}
