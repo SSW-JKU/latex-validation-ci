@@ -386,9 +386,9 @@ runs:
       shell: bash
       run: |
         if [ -f $GITHUB_WORKSPACE/diff.json ]; then
-          echo "File exists"
+          echo "diff.json file exists"
         else
-          echo "File does not exist"
+          echo "diff.json file does not exist"
           exit 1
         fi
 
@@ -396,14 +396,14 @@ runs:
     - name: Print json diff
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
-      run: cat $GITHUB_ACTION_PATH/diff.json
+      run: cat $GITHUB_WORKSPACE/diff.json
 
     # Spell check with ltex-plus and save into folder ltex_reports
     - name: Spell check with ltex (WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
-        python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --changedlines "$GITHUB_ACTION_PATH/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir .
+        python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --changedlines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir .
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
