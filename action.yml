@@ -385,6 +385,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
+        echo "github token: ${{ inputs.github_token }}"
         if [ -f $GITHUB_WORKSPACE/diff.json ]; then
           echo "diff.json file exists"
         else

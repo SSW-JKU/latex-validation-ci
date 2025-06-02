@@ -458,6 +458,7 @@ def main():
     args = parser.parse_args()
     args.workdir = Path(args.workdir)
 
+    log.info(f'github_token: {os.getenv("GITHUB_TOKEN")}')
     if args.option == choices['comment_in_code_and_make_report_opt'] and (
         not args.changedlines or not os.getenv('GITHUB_TOKEN')):
         raise argparse.ArgumentTypeError(
