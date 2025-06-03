@@ -146,7 +146,8 @@ def analize_report(option, base_dir, command, changedlines):
     try:
         log.info(f'command: {command}')
         output = subprocess.check_output(command, shell=True, encoding='utf-8', errors='replace')
-        log.info(output)
+        log.info(f'Attention, unexpected output of ltex is: {output}')
+        return []
 
     # As soon as ltex finds 1 warning or error, it returns return code 2
     except subprocess.CalledProcessError as e:
@@ -272,8 +273,7 @@ def use_ltex(tex_file_path, option, changedlines):
     log.info(f'config-file: {config_file_abs_path}')
     ltex_dir = os.getenv('LTEX_PLUS_DIR')
     if not ltex_dir:
-        ltex_dir = 'ltex-ls-16.0.0/bin/ltex-cli'  # running locally
-        ltex_dir = 'ltex-ls-plus-18.5.1/bin/ltex-cli-plus'
+        ltex_dir = 'ltex-ls-plus-18.5.1/bin/ltex-cli-plus'  # running locally
     ltex_path = os.path.join(base_dir, ltex_dir)
     log.info(f'ltex-plus: {ltex_path}')
 
@@ -397,15 +397,18 @@ def make_md_report_without_comments(option, filtered_paths):
     for path in filtered_paths:
         notifications = use_ltex(path, option, None)
 
-        # Write resulting ltex-notifications to md-file
-        log.info(f'It is time to report by md: {notifications}')
-        summary_file.add_overview_line(path,
-                                       0,
-                                       len(notifications),
-                                       0)
+        if notifications:
+            # Write resulting ltex-notifications to md-file
+            log.info(f'It is time to report by md: {notifications}')
+            summary_file.add_overview_line(path,
+                                           0,
+                                           len(notifications),
+                                           0)
 
-        for notification in notifications:
-            summary_file.add_notification_entry(notification)
+            for notification in notifications:
+                summary_file.add_notification_entry(notification)
+        else:
+            log.warning(f'Notifications for {path}: {notifications}')
 
     # Add details html-tag
     if option == choices['make_report_for_pr_comment_opt']:
@@ -443,7 +446,7 @@ def main():
 
     log.info(f'github_token: {os.getenv("GITHUB_TOKEN")}')
     if args.option == choices['comment_in_code_and_make_report_opt'] and (
-        not args.changedlines or not os.getenv('GITHUB_TOKEN')):
+      not args.changedlines or not os.getenv('GITHUB_TOKEN')):
         raise argparse.ArgumentTypeError(
             "When setting --option to WRITE_PR_COMMENTS_AND_MD_REPORT, changedlines and the env-variable GITHUB_TOKEN "
             "must be set.")
