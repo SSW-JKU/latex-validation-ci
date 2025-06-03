@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import json
 import re
-import sys
 import argparse
 import logging as log
 import subprocess
@@ -14,7 +13,7 @@ from pathlib import Path
 
 from config import Config
 from summary_md_file import SummaryMdFile
-from tex_checks_utils import count_total_warnings
+from tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
 
 already_checked_files = set()
 nr_of_total_warnings = 0
@@ -40,7 +39,7 @@ class SpellingNotification:
         self.message_and_suggestions_mixed = f'{message}{suggestions}'
 
     def __repr__(self):
-        return f"SpellingNotification(file={self.file}, type={self.type}, line={self.line}, column={self.column}," \
+        return f"SpellingNotification(file={self.file}, type={self.type}, line={self.line}, column={self.column}, " \
                f" message={self.message}, code_snippet={self.code_snippet}, suggestions={self.suggestions})"
 
 
@@ -264,23 +263,7 @@ def use_ltex(tex_file_path, option, changedlines):
                                         returns list of notifications to be later written to the md-report-file.
     """
 
-    # Retrieve the value of GITHUB_WORKSPACE
-    github_workspace = os.getenv('GITHUB_WORKSPACE')
-    github_action_workspace = os.getenv('GITHUB_ACTION_PATH')
-
-    # Check if the environment variable is set
-    if github_workspace:
-        print(f'GITHUB_WORKSPACE is set to: {github_workspace}')
-        base_dir = github_workspace
-    else:
-        print('GITHUB_WORKSPACE is not set.')  # runs locally
-        base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
-    if github_action_workspace:
-        print(f'GITHUB_ACTION_PATH is set to: {github_action_workspace}')
-        action_base_dir = github_action_workspace
-    else:
-        print('GITHUB_ACTION_PATH is not set.')  # runs locally
-        action_base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+    base_dir, action_base_dir = get_repo_and_action_path_env_variables()
 
     # Create paths to tex file, ltex executable and ltex config file
     tex_file_abs_path = os.path.join(base_dir, tex_file_path)

@@ -1,6 +1,38 @@
+import os
 import re
 
 from bs4 import BeautifulSoup
+
+
+def get_repo_and_action_path_env_variables():
+    """
+        Extract plain text from an HTML file, removing color codes.
+
+        Args:
+
+        Returns:
+            string: path of current workspace repo
+            string: path of GitHub action
+    """
+    # Retrieve the value of GITHUB_WORKSPACE and GITHUB_ACTION_PATH
+    github_workspace = os.getenv('GITHUB_WORKSPACE')
+    github_action_workspace = os.getenv('GITHUB_ACTION_PATH')
+
+    # Check if the environment variable is set
+    if github_workspace:
+        print(f'GITHUB_WORKSPACE is set to: {github_workspace}')
+        base_dir = github_workspace
+    else:
+        print('GITHUB_WORKSPACE is not set.')  # runs locally
+        base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+    if github_action_workspace:
+        print(f'GITHUB_ACTION_PATH is set to: {github_action_workspace}')
+        action_base_dir = github_action_workspace
+    else:
+        print('GITHUB_ACTION_PATH is not set.')  # runs locally
+        action_base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+
+    return base_dir, action_base_dir
 
 
 def remove_ansi_escape_sequences(text):

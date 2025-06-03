@@ -2,6 +2,8 @@
 import os
 import threading
 
+from scripts.tex_checks_utils import get_repo_and_action_path_env_variables
+
 file_lock = threading.Lock()
 
 
@@ -31,16 +33,9 @@ class SummaryMdFile:
             Returns:
         """
 
-        github_workspace = os.getenv('GITHUB_WORKSPACE')
         self.add_details_summary = make_content_expandable
 
-        # Check if the environment variable is set
-        if github_workspace:
-            print(f'GITHUB_WORKSPACE is set to: {github_workspace}')
-            base_dir = github_workspace
-        else:
-            print('GITHUB_WORKSPACE is not set.')  # runs locally
-            base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+        base_dir, _ = get_repo_and_action_path_env_variables()
         self.file_name = os.path.join(base_dir, file_name)
 
         with open(self.file_name, 'wb') as f:

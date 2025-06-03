@@ -330,8 +330,6 @@ runs:
       shell: bash
       run: |
         python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: Post Chktex-Lint report (md file) as PR-comment
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
