@@ -1,23 +1,10 @@
 name: "LaTeX Validation Action"
 description: "Validates (spell/grammar checks and lints) the LaTeX files of the SSW lectures and exercises"
 inputs:
-  sample_input:
-    description: "Some description"
-    required: false # or leave out ot make it required
-    default: "Some default value"
   python_version:
     description: "Python version to use"
     required: false
     default: "3.13"
-  texlive_version:
-    description: "TeX Live version to use"
-    required: false
-    default: "2024"
-  texlive_packages:
-    description: "TeX Live packages to install"
-    required: false
-    default: >-
-      scheme-basic
   build_config:
     description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
     required: false
@@ -34,6 +21,14 @@ inputs:
     description: 'For linting: create chktex-report (md file) and post as PR-comment'
     required: false
     default: 'false'
+  chktex_version:
+    description: "CHKTEX version to use"
+    required: false
+    default: "1.7.9"
+  lint_report_folder:
+    description: "Relative path where html-chktex-lint-reports (captured console output) is saved intermediately."
+    required: false
+    default: "chktex_reports"
   spellcheck_comment_with_zipped_report:
     description: 'For spell checking: create PR-comment with ltex-reports packaged as zip'
     required: false
@@ -49,7 +44,7 @@ inputs:
   spellcheck_comment_with_md_report_and_comment_in_code:
     description: 'For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment'
     required: false
-    default: 'true'
+    default: 'false'
   ltex_plus_version:
     description: "Ltex-plus version to use"
     required: false
@@ -58,14 +53,6 @@ inputs:
     description: "Relative path where html-ltex-spell-check-reports (captured console output) is saved intermediately."
     required: false
     default: "ltex_reports"
-  chktex_version:
-    description: "CHKTEX version to use"
-    required: false
-    default: "1.7.9"
-  lint_report_folder:
-    description: "Relative path where html-chktex-lint-reports (captured console output) is saved intermediately."
-    required: false
-    default: "chktex_reports"
   github_token:
     description: "Workflow Github token from secrets"
     required: false
@@ -85,21 +72,6 @@ runs:
     # - name: Create symbolic link for requirements.txt
     #   run: ln -s ${{ github.action_path }}/requirements.txt
     #   shell: bash
-    # install Python
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        cache: "pip"
-        python-version: ${{ inputs.python_version }}
-
-    - name: Install Python dependencies
-      working-directory: ${{ github.action_path }}
-      shell: bash
-      run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade setuptools
-        pip install PyGithub
-        pip install beautifulsoup4
 
     # TODO: if you also need texlive, you can use this step
     # # install TeX live + install required dependencies
@@ -131,13 +103,28 @@ runs:
         echo "Changed Files:"
         echo ${{ steps.filter.outputs.changed_files }}
 
+    # install Python
+    - name: Setup Python
+      if: ${{ steps.filter.outputs.changed == 'true' }}
+      uses: actions/setup-python@v4
+      with:
+        cache: "pip"
+        python-version: ${{ inputs.python_version }}
+
+    - name: Install Python dependencies
+      if: ${{ steps.filter.outputs.changed == 'true' }}
+      working-directory: ${{ github.action_path }}
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade setuptools
+        pip install PyGithub
+        pip install beautifulsoup4
+
     # ******************************************************************************************************************
     # ******************************************* lint_changed_texs ****************************************************
     # ******************************************************************************************************************
 
-    - name: Create symbolic link for lint_texs.py
-      run: ln -s ${{ github.action_path }}/scripts/lint_texs.py
-      shell: bash
 
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)
@@ -411,28 +398,3 @@ runs:
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
-
-    # ******************************************************************************************************************
-    # ********************************************* test dummy section *************************************************
-    # ******************************************************************************************************************
-
-    # just print the input and set a new output
-    - name: Dummy
-      id: dummy
-      shell: bash
-      run: |
-        echo "Sample input: ${{ inputs.sample_input }}"
-        echo "Python version: ${{ inputs.python_version }}"
-        echo "TeX Live version: ${{ inputs.texlive_version }}"
-        echo "TeX Live packages: ${{ inputs.texlive_packages }}"
-        echo "GITHUB_ACTION_PATH: $GITHUB_ACTION_PATH"
-        echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
-
-        echo "$GITHUB_ACTION_PATH/scripts/lint_texs.py"
-        if [ -f "$GITHUB_ACTION_PATH/scripts/lint_texs.py" ]; then
-          echo "File exists (using GITHUB_ACTION_PATH)."
-        else
-          echo "File does not exist (using GITHUB_ACTION_PATH)."
-        fi
-
-        echo "sample_output=Sample output" >> $GITHUB_OUTPUT
