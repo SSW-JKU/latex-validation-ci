@@ -2,7 +2,7 @@
 import os
 import threading
 
-from scripts.tex_checks_utils import get_repo_and_action_path_env_variables
+from tex_checks_utils import get_repo_and_action_path_env_variables
 
 file_lock = threading.Lock()
 
