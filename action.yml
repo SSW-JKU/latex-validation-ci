@@ -140,7 +140,7 @@ runs:
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured chktex console-output)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
       id: artifact-upload-chktex-report-step
       uses: actions/upload-artifact@v4
       with:
@@ -149,7 +149,7 @@ runs:
 
     # Create a pull request review comment (with the artifact link)
     - name: Post PR comment (with link to zip artifact)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -166,7 +166,7 @@ runs:
 
     # Delete all html reports (chktex_reports)
     - name: Delete all files in chktex_reports
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
       shell: bash
       run: |
         rm -rf chktex_reports
@@ -174,7 +174,7 @@ runs:
     # --------------------------------------- Create PR-comment with chktex-report md ---------------------------------------
 
     - name: Post Chktex-Lint Report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./lint_summary.md
@@ -182,14 +182,14 @@ runs:
     # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
 
     - name: Upload GITHUB_STEP_SUMMARY
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       shell: bash
       run: |
         cat lint_summary.md >> $GITHUB_STEP_SUMMARY
 
     # Create a pull request review comment (with the step summary link)
     - name: Post PR comment (with GITHUB_STEP_SUMMARY link)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -262,7 +262,7 @@ runs:
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       id: artifact-upload-ltex-report-step
       uses: actions/upload-artifact@v4
       with:
@@ -271,7 +271,7 @@ runs:
 
     # Create a pull request review comment (with the artifact link)
     - name: Post PR comment (with link to zip artifact)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -288,7 +288,7 @@ runs:
 
     # Delete all html reports (ltex_reports)
     - name: Delete all files in ltex_reports
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
           rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
@@ -303,7 +303,7 @@ runs:
         python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     - name: Post Chktex-Lint report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
@@ -317,14 +317,14 @@ runs:
         python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
           cat spell_check_report.md >> $GITHUB_STEP_SUMMARY
 
     # Create a pull request review comment (with the step summary link)
     - name: Post PR comment (wit GITHUB_STEP_SUMMARY link)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -378,7 +378,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: Post Chktex-Lint's remaining warnings (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS | int > 0 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
