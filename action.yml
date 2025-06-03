@@ -96,6 +96,8 @@ runs:
           changed:
             - added|modified: '*SS/**/*.tex'
             - added|modified: '*WS/**/*.tex'
+            - added|modified: '**/*WS/**/*.tex'
+            - added|modified: '**/*SS/**/*.tex'
 
     - name: Print changed files
       shell: bash
