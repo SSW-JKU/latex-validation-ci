@@ -10,8 +10,7 @@ from pathlib import Path
 
 from config import Config
 from summary_md_file import SummaryMdFile
-from tex_checks_utils import count_total_warnings
-
+from tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
 
 already_checked_files = set()
 nr_of_total_warnings_for_zip = 0
@@ -77,7 +76,7 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
     try:
         log.info(f'command: {command}')
         output = subprocess.check_output(command, shell=True, encoding='utf-8', errors='replace')
-        log.info(output)
+        # log.info(output)
         lines = output.split("\n")
 
         # Run over lines of raw chktex-report and parse warnings/errors/messages into objects LintNotification
@@ -99,7 +98,6 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
             pattern = "(.+), (Warning|Error|Message) (\\d+), (\\d+), (.+)"
             match = re.match(pattern, first_line)
             if match:
-                log.info(f'Found match.')
                 file = match.group(1).removeprefix(base_dir)
                 file = os.path.abspath(file)
                 files.add(file)
@@ -159,22 +157,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     """
 
     # Retrieve the value of GITHUB_WORKSPACE
-    github_workspace = os.getenv('GITHUB_WORKSPACE')
-    github_action_workspace = os.getenv('GITHUB_ACTION_PATH')
-
-    # Check if the environment variable is set
-    if github_workspace:
-        print(f'GITHUB_WORKSPACE is set to: {github_workspace}')
-        base_dir = github_workspace
-    else:
-        print('GITHUB_WORKSPACE is not set.')  # runs locally
-        base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
-    if github_action_workspace:
-        print(f'GITHUB_ACTION_PATH is set to: {github_action_workspace}')
-        action_base_dir = github_action_workspace
-    else:
-        print('GITHUB_ACTION_PATH is not set.')  # runs locally
-        action_base_dir = ''  # TODO: set abs. local path to this repo, if required to run locally
+    base_dir, action_base_dir = get_repo_and_action_path_env_variables()
 
     tex_file_abs_path = os.path.join(base_dir, tex_file_path)
     print(f'tex-file: {tex_file_abs_path}')
@@ -190,9 +173,8 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     html_report_path = '-'.join(parts)
 
     # Perform linting and save console output to html-file
-
     if create_zipped_report:
-        # report_folder = ".github/scripts/test_exercise_files/chktex_reports"
+        # report_folder = "" # set manually if required to run locally
         report_folder = os.getenv('LINT_REPORT_FOLDER')
         log.info(f'report_folder: {report_folder}')
 
