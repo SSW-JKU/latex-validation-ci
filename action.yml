@@ -186,7 +186,7 @@ runs:
         fi
 
     - name: Post Chktex-Lint Report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 && FILE_LENGTH_CHKTEX < 65536 }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 && env.FILE_LENGTH_CHKTEX < 65536 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./lint_summary.md
