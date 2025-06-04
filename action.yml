@@ -173,8 +173,20 @@ runs:
 
     # --------------------------------------- Create PR-comment with chktex-report md ---------------------------------------
 
-    - name: Post Chktex-Lint Report (md file) as PR-comment
+    - name: Check file length (chktex md-report)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
+      shell: bash
+      run: |
+        FILE_PATH="./lint_summary.md"
+        FILE_LENGTH=$(wc -m < "$FILE_PATH")
+        echo "File length: $FILE_LENGTH characters"
+        echo "FILE_LENGTH_CHKTEX=$FILE_LENGTH" >> $GITHUB_ENV
+        if [ "$FILE_LENGTH" -gt 65536 ]; then
+          echo "File length exceeds max. PR-comment-message-body length."
+        fi
+
+    - name: Post Chktex-Lint Report (md file) as PR-comment
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 && FILE_LENGTH_CHKTEX < 65536 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./lint_summary.md
@@ -293,21 +305,6 @@ runs:
       run: |
           rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
 
-    # --------------------------------------- Post md-report as pr-comment ---------------------------------------
-
-    # Spell check with ltex-plus and save into folder ltex_reports
-    - name: Spell check with ltex (WRITE_MD_REPORT_AS_PR_COMMENT)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
-      shell: bash
-      run: |
-        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
-
-    - name: Post Chktex-Lint report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
-      uses: thollander/actions-comment-pull-request@v3
-      with:
-        file-path: ./spell_check_report.md
-
     # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
 
     - name: Spell check with ltex (GITHUB_STEP_SUMMARY)
@@ -339,6 +336,34 @@ runs:
             body: commentBody,
           });
           console.log(`Comment created.`)
+
+
+    # --------------------------------------- Post md-report as pr-comment ---------------------------------------
+
+    # Spell check with ltex-plus and save into folder ltex_reports
+    - name: Spell check with ltex (WRITE_MD_REPORT_AS_PR_COMMENT)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+
+    - name: Check file length (ltex md-report)
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      shell: bash
+      run: |
+        FILE_PATH="./spell_check_report.md"
+        FILE_LENGTH=$(wc -m < "$FILE_PATH")
+        echo "File length: $FILE_LENGTH characters"
+        echo "FILE_LENGTH_LTEX=$FILE_LENGTH" >> $GITHUB_ENV
+        if [ "$FILE_LENGTH" -gt 65536 ]; then
+          echo "File length exceeds max. pr-comment-message-body length."
+        fi
+
+    - name: Post Chktex-Lint report (md file) as PR-comment
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_LTEX < 65536  }}
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        file-path: ./spell_check_report.md
 
     # ************************************ Comment directly in code and post remaining warnings as md-report as pr-comment ************************************************
     # Retrieve diffs, gets changed lines, content, files etc.
@@ -377,8 +402,21 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
-    - name: Post Chktex-Lint's remaining warnings (md file) as PR-comment
+    # Check if file length exceeds pr-comment max. message-body-length
+    - name: Check file length (ltex md-report)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      shell: bash
+      run: |
+        FILE_PATH="./spell_check_report.md"
+        FILE_LENGTH=$(wc -m < "$FILE_PATH")
+        echo "File length: $FILE_LENGTH characters"
+        echo "FILE_LENGTH_REMAINING_LTEX=$FILE_LENGTH" >> $GITHUB_ENV
+        if [ "$FILE_LENGTH" -gt 65536 ]; then
+          echo "File length exceeds max. pr-comment-message-body length."
+        fi
+
+    - name: Post Chktex-Lint's remaining warnings (md file) as PR-comment
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_REMAINING_LTEX < 65536 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
