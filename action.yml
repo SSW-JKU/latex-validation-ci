@@ -9,10 +9,6 @@ inputs:
     description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
     required: false
     default: '.lecture-build-ci.json'
-  lint_pr_comment_with_zipped_report:
-    description: 'For linting: create PR-comment with chktex-reports packaged as zip'
-    required: false
-    default: 'false'
   lint_pr_comment_with_link_to_GITHUB_SUMMARY:
     description: 'For linting: create chktex-report as GITHUB_STEP_SUMMARY'
     required: false
@@ -112,13 +108,13 @@ runs:
 
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)
-      if: ${{ steps.filter.outputs.changed == 'true' && (inputs.lint_pr_comment_with_zipped_report == 'true' || inputs.spellcheck_comment_with_zipped_report == 'true') }}
+      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
          sudo apt install colorized-logs
 
     - name: Set lint reports path
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' }}
+      if: ${{ steps.filter.outputs.changed == 'true' }}
       shell: bash
       run: |
         echo "LINT_REPORT_FOLDER=${{ inputs.lint_report_folder }}" >> $GITHUB_ENV
@@ -135,41 +131,42 @@ runs:
         else
           CREATE_MD_REPORT="false"
         fi
-        python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir . --lint_pr_comment_with_zipped_report "${{ inputs.lint_pr_comment_with_zipped_report}}" --lint_summary "$CREATE_MD_REPORT"
+        python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir . --lint_summary "$CREATE_MD_REPORT"
 
+    # ******************** NOTE: Following section has been scratched for the time being, as capturing the raw console output of chktex does not provide any colorcoding or any other immediate benefit (without being processed)
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
     # Upload the ZIP file as an artifact
-    - name: Upload ZIP artifact (captured chktex console-output)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
-      id: artifact-upload-chktex-report-step
-      uses: actions/upload-artifact@v4
-      with:
-        name: chktex_reports
-        path: ${{ env.LINT_REPORT_FOLDER }}
+    #- name: Upload ZIP artifact (captured chktex console-output)
+    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  id: artifact-upload-chktex-report-step
+    #  uses: actions/upload-artifact@v4
+    #  with:
+    #    name: chktex_reports
+    #    path: ${{ env.LINT_REPORT_FOLDER }}
 
     # Create a pull request review comment (with the artifact link)
-    - name: Post PR comment (with link to zip artifact)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const artifactID = '${{ steps.artifact-upload-chktex-report-step.outputs.artifact-id }}'
-          const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
-          const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
-          const { data: comment } = await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: commentBody
-          });
-          console.log(`Comment created: ${artifactUrl}`)
+    #- name: Post PR comment (with link to zip artifact)
+    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  uses: actions/github-script@v7
+    #  with:
+    #    script: |
+    #      const artifactID = '${{ steps.artifact-upload-chktex-report-step.outputs.artifact-id }}'
+    #      const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${artifactID}`
+    #      const commentBody = `The linting process found a total of ${process.env.TOTAL_LINT_WARNINGS_ZIP} warnings. The chktex report is available for download: [chktex_report.zip](${artifactUrl})`
+    #      const { data: comment } = await github.rest.issues.createComment({
+    #        owner: context.repo.owner,
+    #        repo: context.repo.repo,
+    #        issue_number: context.issue.number,
+    #        body: commentBody
+    #      });
+    #      console.log(`Comment created: ${artifactUrl}`)
 
     # Delete all html reports (chktex_reports)
-    - name: Delete all files in chktex_reports
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
-      shell: bash
-      run: |
-        rm -rf chktex_reports
+    #- name: Delete all files in chktex_reports
+    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  shell: bash
+    #  run: |
+    #    rm -rf chktex_reports
 
     # --------------------------------------- Create PR-comment with chktex-report md ---------------------------------------
 
