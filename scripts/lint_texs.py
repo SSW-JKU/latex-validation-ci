@@ -122,14 +122,17 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
                 step = 1
             i = i + step
 
-        # Write report to summary md file
-        summary_file.add_overview_line(target_file_path,
-                                       nr_of_notifications.get('Error'),
-                                       nr_of_notifications.get('Warning'),
-                                       nr_of_notifications.get('Message'))
+        if notifications:
+            # Write report to summary md file
+            summary_file.add_overview_line(target_file_path,
+                                           nr_of_notifications.get('Error'),
+                                           nr_of_notifications.get('Warning'),
+                                           nr_of_notifications.get('Message'))
 
-        for notification in notifications:
-            summary_file.add_notification_entry(notification)
+            for notification in notifications:
+                summary_file.add_notification_entry(notification)
+        else:
+            log.info(f'After chktex-run notifications are: {notifications}')
 
         # Update checked files
         already_checked_files.update(files)

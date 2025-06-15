@@ -368,13 +368,14 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
             # log.info(f'It is time to report by md: {notifications_not_in_diff}')
 
             # Write report for warnings outside diff to summary md file
-            summary_file.add_overview_line(changed_file['path'],
-                                           0,
-                                           len(notifications_not_in_diff),
-                                           0)
+            if len(notifications_not_in_diff) > 0:
+                summary_file.add_overview_line(changed_file['path'],
+                                               0,
+                                               len(notifications_not_in_diff),
+                                               0)
 
-            for notification in notifications_not_in_diff:
-                summary_file.add_notification_entry(notification)
+                for notification in notifications_not_in_diff:
+                    summary_file.add_notification_entry(notification)
     summary_file.add_details_summary_end()
     log.info('Report finnished.')
 
