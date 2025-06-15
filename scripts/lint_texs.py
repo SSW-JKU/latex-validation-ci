@@ -251,7 +251,7 @@ def main():
     else:
         summary_file = None
     for path in filtered_paths:
-        if any(path in s for s in already_checked_files):
+        if not any(path in s for s in already_checked_files):
             use_chktex(path, create_zipped_report, create_md_summary, summary_file)
 
     # Append the environment variable to GITHUB_ENV

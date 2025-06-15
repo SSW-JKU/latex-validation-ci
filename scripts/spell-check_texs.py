@@ -363,7 +363,7 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
 
     log.info(f'Changed lines are: {changed_files}')
     for changed_file in changed_files:
-        if any(changed_file in s for s in already_checked_files):
+        if not any(changed_file in s for s in already_checked_files):
             notifications_not_in_diff = use_ltex(changed_file['path'], option, changed_file['changed_lines'])
             # log.info(f'It is time to report by md: {notifications_not_in_diff}')
 
@@ -397,7 +397,7 @@ def make_md_report_without_comments(option, filtered_paths):
                                  len(filtered_paths))
 
     for path in filtered_paths:
-        if any(path in s for s in already_checked_files):
+        if not any(path in s for s in already_checked_files):
             notifications = use_ltex(path, option, None)
 
             if notifications:
@@ -465,7 +465,7 @@ def main():
     # Perform spell-check and provide result depending on args.option
     if args.option == choices['zip_console_report_opt']:
         for path in filtered_paths:
-            if any(path in s for s in already_checked_files):
+            if not any(path in s for s in already_checked_files):
                 use_ltex(path, args.option, None)
 
     elif args.option == choices['comment_in_code_and_make_report_opt']:
