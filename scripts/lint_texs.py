@@ -131,8 +131,6 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
         for notification in notifications:
             summary_file.add_notification_entry(notification)
 
-        summary_file.add_details_summary_end()
-
         # Update checked files
         already_checked_files.update(files)
 
@@ -253,6 +251,9 @@ def main():
     for path in filtered_paths:
         if not any(path in s for s in already_checked_files):
             use_chktex(path, create_zipped_report, create_md_summary, summary_file)
+
+    if create_md_summary:
+        summary_file.add_details_summary_end()
 
     # Append the environment variable to GITHUB_ENV
     with open(os.getenv('GITHUB_ENV'), 'a') as env_file:

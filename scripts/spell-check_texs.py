@@ -402,7 +402,7 @@ def make_md_report_without_comments(option, filtered_paths):
 
             if notifications:
                 # Write resulting ltex-notifications to md-file
-                log.info(f'It is time to report by md: {notifications}')
+                # log.info(f'It is time to report by md: {notifications}')
                 summary_file.add_overview_line(path,
                                                0,
                                                len(notifications),
