@@ -26,7 +26,10 @@ choices = {
 }
 
 CONFIG_FILE_REL_PATH = 'ltex_config.txt'
-LOCK_FILE = '/ltex_cli_plus.lock'
+LOCK_DIR = f'{os.getenv("GITHUB_ACTION_PATH")}/tmp'
+os.makedirs(LOCK_DIR, exist_ok=True)
+
+LOCK_FILE = os.path.join(LOCK_DIR, 'ltex_cli_plus.lock')
 LOCK = FileLock(LOCK_FILE)
 
 
