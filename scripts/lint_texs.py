@@ -227,16 +227,18 @@ def main():
     parser.add_argument('-cf', '--changedfiles', type=str, required=True, help="Paths to changed files to be linted.")
     parser.add_argument('-c', '--config', required=True, help="Config for CI/CD pipeline, likely .lecture-build-ci.json")
     parser.add_argument('-wd', '--workdir', required=True, help="Working directory, likely repo root.")
-    parser.add_argument('--lint_pr_comment_with_zipped_report', required=True, type=str_to_bool, nargs='?', const=True,
+    parser.add_argument('--lint_pr_comment_with_zipped_report', type=str_to_bool, nargs='?', const=True,
                         default=False, help="Feature: zip report and post download link as PR-comment")
-    parser.add_argument('--lint_summary', required=True, type=str_to_bool, nargs='?', const=True,
+    parser.add_argument('--lint_summary', type=str_to_bool, nargs='?', const=True,
                         default=False, help="Feature: Write lint report as summary in md-format.")
     args = parser.parse_args()
     args.workdir = Path(args.workdir)
 
     config_file = Config(args)
     create_zipped_report = args.lint_pr_comment_with_zipped_report
+    log.info(f'lint_pr_comment_with_zipped_report is set: {create_zipped_report}')
     create_md_summary = args.lint_summary
+    log.info(f'create_md_summary is set: {create_md_summary}')
     log.info(f'Added/Modified tex-file: {args.changedfiles}')
 
     # Filter paths that contain the specific directory defined in config in their path
