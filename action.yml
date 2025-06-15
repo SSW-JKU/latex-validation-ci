@@ -52,7 +52,7 @@ inputs:
   github_token:
     description: "Workflow Github token from secrets"
     required: false
-    default: ""
+    default: ${{ github.token }}
 
 #outputs:
 #  sample_output:
@@ -179,7 +179,7 @@ runs:
         echo "File length: $FILE_LENGTH characters"
         echo "FILE_LENGTH_CHKTEX=$FILE_LENGTH" >> $GITHUB_ENV
         if [ "$FILE_LENGTH" -gt 65536 ]; then
-          echo "File length exceeds max. PR-comment-message-body length."
+          echo "File length ($FILE_LENGTH) exceeds max. PR-comment-message-body length (65536)."
         fi
 
     - name: Post Chktex-Lint Report (md file) as PR-comment

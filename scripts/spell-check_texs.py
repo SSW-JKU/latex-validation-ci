@@ -363,18 +363,20 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
 
     log.info(f'Changed lines are: {changed_files}')
     for changed_file in changed_files:
-        notifications_not_in_diff = use_ltex(changed_file['path'], option, changed_file['changed_lines'])
-        log.info(f'It is time to report by md: {notifications_not_in_diff}')
+        if any(changed_file in s for s in already_checked_files):
+            notifications_not_in_diff = use_ltex(changed_file['path'], option, changed_file['changed_lines'])
+            # log.info(f'It is time to report by md: {notifications_not_in_diff}')
 
-        # Write report for warnings outside diff to summary md file
-        summary_file.add_overview_line(changed_file['path'],
-                                       0,
-                                       len(notifications_not_in_diff),
-                                       0)
+            # Write report for warnings outside diff to summary md file
+            summary_file.add_overview_line(changed_file['path'],
+                                           0,
+                                           len(notifications_not_in_diff),
+                                           0)
 
-        for notification in notifications_not_in_diff:
-            summary_file.add_notification_entry(notification)
+            for notification in notifications_not_in_diff:
+                summary_file.add_notification_entry(notification)
     summary_file.add_details_summary_end()
+    log.info('Report finnished.')
 
 
 def make_md_report_without_comments(option, filtered_paths):
@@ -395,24 +397,25 @@ def make_md_report_without_comments(option, filtered_paths):
                                  len(filtered_paths))
 
     for path in filtered_paths:
-        notifications = use_ltex(path, option, None)
+        if any(path in s for s in already_checked_files):
+            notifications = use_ltex(path, option, None)
 
-        if notifications:
-            # Write resulting ltex-notifications to md-file
-            log.info(f'It is time to report by md: {notifications}')
-            summary_file.add_overview_line(path,
-                                           0,
-                                           len(notifications),
-                                           0)
+            if notifications:
+                # Write resulting ltex-notifications to md-file
+                log.info(f'It is time to report by md: {notifications}')
+                summary_file.add_overview_line(path,
+                                               0,
+                                               len(notifications),
+                                               0)
 
-            for notification in notifications:
-                summary_file.add_notification_entry(notification)
-        else:
-            log.warning(f'Notifications for {path}: {notifications}')
+                for notification in notifications:
+                    summary_file.add_notification_entry(notification)
+            else:
+                log.warning(f'Notifications for {path}: {notifications}')
 
     # Add details html-tag
-    if option == choices['make_report_for_pr_comment_opt']:
-        summary_file.add_details_summary_end()
+    summary_file.add_details_summary_end()
+    log.info('Report finnished.')
 
 
 def main():
@@ -444,8 +447,9 @@ def main():
     args = parser.parse_args()
     args.workdir = Path(args.workdir)
 
-    log.info(f'github_token: {os.getenv("GITHUB_TOKEN")}')
-    if args.option == choices['comment_in_code_and_make_report_opt'] and (
+    chosen_option = args.option
+    log.info(f'Chosen option: {chosen_option}')
+    if chosen_option == choices['comment_in_code_and_make_report_opt'] and (
       not args.changedlines or not os.getenv('GITHUB_TOKEN')):
         raise argparse.ArgumentTypeError(
             "When setting --option to WRITE_PR_COMMENTS_AND_MD_REPORT, changedlines and the env-variable GITHUB_TOKEN "
@@ -460,19 +464,17 @@ def main():
     log.info(f'Changed tex-files from {config_file.active_semester}: {filtered_paths}')
 
     # Perform spell-check and provide result depending on args.option
-    if args.option == choices['zip_console_report_opt']:
-        log.info("Let's capture the report as html.")
+    if chosen_option == choices['zip_console_report_opt']:
         for path in filtered_paths:
-            use_ltex(path, args.option, None)
+            if any(path in s for s in already_checked_files):
+                use_ltex(path, chosen_option, None)
 
-    elif args.option == choices['comment_in_code_and_make_report_opt']:
-        log.info("Let's go for comment_in_code_and_make_report_opt.")
-        comment_in_code_and_make_report_opt(args.option, filtered_paths, args.changedlines)
+    elif chosen_option == choices['comment_in_code_and_make_report_opt']:
+        comment_in_code_and_make_report_opt(chosen_option, filtered_paths, args.changedlines)
 
-    # choices['make_report_for_pr_comment_opt'] or choices['make_report_for_github_summary_opt']
+    # workflow: choices['make_report_for_pr_comment_opt'] or choices['make_report_for_github_summary_opt']
     else:
-        log.info("Let's go for make_report_for_pr_comment_opt or make_report_for_github_summary_opt.")
-        make_md_report_without_comments(args.option, filtered_paths)
+        make_md_report_without_comments(chosen_option, filtered_paths)
 
     # Append the environment variable to GITHUB_ENV
     with open(os.getenv('GITHUB_ENV'), 'a') as env_file:

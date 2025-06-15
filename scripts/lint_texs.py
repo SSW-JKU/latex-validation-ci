@@ -131,6 +131,8 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
         for notification in notifications:
             summary_file.add_notification_entry(notification)
 
+        summary_file.add_details_summary_end()
+
         # Update checked files
         already_checked_files.update(files)
 
@@ -194,7 +196,10 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     # Perform linting, process output and create md. file
     if create_md_summary:
         command = f'script -q -c "{chktex_path} -g -l {config_file_abs_path} {tex_file_abs_path}" /dev/null'
-        analize_report(base_dir, command, tex_file_path, summary_file)
+        if not summary_file:
+            log.error("Summary file is none, writing report not feasible.")
+        else:
+            analize_report(base_dir, command, tex_file_path, summary_file)
 
 
 def str_to_bool(value):
@@ -244,7 +249,8 @@ def main():
     else:
         summary_file = None
     for path in filtered_paths:
-        use_chktex(path, create_zipped_report, create_md_summary, summary_file)
+        if any(path in s for s in already_checked_files):
+            use_chktex(path, create_zipped_report, create_md_summary, summary_file)
 
     # Append the environment variable to GITHUB_ENV
     with open(os.getenv('GITHUB_ENV'), 'a') as env_file:
