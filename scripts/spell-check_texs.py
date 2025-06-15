@@ -447,9 +447,8 @@ def main():
     args = parser.parse_args()
     args.workdir = Path(args.workdir)
 
-    chosen_option = args.option
-    log.info(f'Chosen option: {chosen_option}')
-    if chosen_option == choices['comment_in_code_and_make_report_opt'] and (
+    log.info(f'Chosen option: {args.option}')
+    if args.option == choices['comment_in_code_and_make_report_opt'] and (
       not args.changedlines or not os.getenv('GITHUB_TOKEN')):
         raise argparse.ArgumentTypeError(
             "When setting --option to WRITE_PR_COMMENTS_AND_MD_REPORT, changedlines and the env-variable GITHUB_TOKEN "
@@ -464,17 +463,17 @@ def main():
     log.info(f'Changed tex-files from {config_file.active_semester}: {filtered_paths}')
 
     # Perform spell-check and provide result depending on args.option
-    if chosen_option == choices['zip_console_report_opt']:
+    if args.option == choices['zip_console_report_opt']:
         for path in filtered_paths:
             if any(path in s for s in already_checked_files):
-                use_ltex(path, chosen_option, None)
+                use_ltex(path, args.option, None)
 
-    elif chosen_option == choices['comment_in_code_and_make_report_opt']:
-        comment_in_code_and_make_report_opt(chosen_option, filtered_paths, args.changedlines)
+    elif args.option == choices['comment_in_code_and_make_report_opt']:
+        comment_in_code_and_make_report_opt(args.option, filtered_paths, args.changedlines)
 
     # workflow: choices['make_report_for_pr_comment_opt'] or choices['make_report_for_github_summary_opt']
     else:
-        make_md_report_without_comments(chosen_option, filtered_paths)
+        make_md_report_without_comments(args.option, filtered_paths)
 
     # Append the environment variable to GITHUB_ENV
     with open(os.getenv('GITHUB_ENV'), 'a') as env_file:
