@@ -10,6 +10,7 @@ from typing import List
 
 from github import Github
 from pathlib import Path
+from filelock import FileLock
 
 from config import Config
 from summary_md_file import SummaryMdFile
@@ -25,6 +26,8 @@ choices = {
 }
 
 CONFIG_FILE_REL_PATH = 'ltex_config.txt'
+LOCK_FILE = '/ltex_cli_plus.lock'
+LOCK = FileLock(LOCK_FILE)
 
 
 class SpellingNotification:
@@ -144,9 +147,10 @@ def analize_report(option, base_dir, command, changedlines):
 
     # Run ltex for specified ltex file
     try:
-        log.info(f'command: {command}')
-        output = subprocess.check_output(command, shell=True, encoding='utf-8', errors='replace')
-        log.info(f'Attention, unexpected output of ltex is: {output}')
+        with LOCK:
+            log.info(f'command: {command}')
+            output = subprocess.check_output(command, shell=True, encoding='utf-8', errors='replace')
+            log.info(f'Attention, unexpected output of ltex is: {output}')
         return []
 
     # As soon as ltex finds 1 warning or error, it returns return code 2
@@ -292,8 +296,9 @@ def use_ltex(tex_file_path, option, changedlines):
         os.makedirs(f'{base_dir}/{report_folder}', exist_ok=True)
 
         # Perform spell check and save console output to html-file
-        command = f'script -q -c "{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}" /dev/null | ansi2html > {report_folder}/{tex_file_path}'
-        subprocess.run(command, shell=True, check=True)
+        with LOCK:
+            command = f'script -q -c "{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}" /dev/null | ansi2html > {report_folder}/{tex_file_path}'
+            subprocess.run(command, shell=True, check=True)
 
         # Console output is only captured, need to count warnings for PR-comment
         global nr_of_total_warnings
