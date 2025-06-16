@@ -149,84 +149,84 @@ def analize_report(option, base_dir, command, changedlines):
     """
 
     # Run ltex for specified ltex file
-    try:
-        with LOCK:
+    with LOCK:
+        try:
             log.info(f'command: {command}')
             output = subprocess.check_output(command, shell=True, encoding='utf-8', errors='replace')
             log.info(f'Attention, unexpected output of ltex is: {output}')
-        return []
+            return []
 
-    # As soon as ltex finds 1 warning or error, it returns return code 2
-    except subprocess.CalledProcessError as e:
-        output = e.output
-        log.info(f"Got error: {e.stderr}, and output.")
-        lines = output.split("\n")
+        # As soon as ltex finds 1 warning or error, it returns return code 2
+        except subprocess.CalledProcessError as e:
+            output = e.output
+            log.info(f"Got error: {e.stderr}, and output.")
+            lines = output.split("\n")
 
-        # Run over lines of raw ltex-report and parse warnings/errors/messages into objects SpellingNotification
-        files = set()
-        notifications = {'notifications_to_comment': [], 'notifications_to_report': []}
-        i = 0
-        while i < len(lines):
-            first_line = lines[i]
-            second_line = lines[i + 1] if i + 1 < len(lines) else ""
-            step = 2
+            # Run over lines of raw ltex-report and parse warnings/errors/messages into objects SpellingNotification
+            files = set()
+            notifications = {'notifications_to_comment': [], 'notifications_to_report': []}
+            i = 0
+            while i < len(lines):
+                first_line = lines[i]
+                second_line = lines[i + 1] if i + 1 < len(lines) else ""
+                step = 2
 
-            # Matches lines like: "/home/runner/work/sw1-latex-exercise-ci/sw1-latex-exercise-ci/24SS/UE01/Unterricht/Lernziele.tex:57:136: info: 'yes': Möglicher Tippfehler gefunden. [AUSTRIAN_GERMAN_SPELLER_RULE]"
-            pattern = (
-                r"^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+):\s*(?P<type>\w+):\s*(?P<message>.+).*$"
-            )
-            match = re.match(pattern, first_line)
-            global nr_of_total_warnings
-            if match:
-                file = match.group('file')
-                file = file.removeprefix(base_dir).removeprefix("/")
-                files.add(file)
+                # Matches lines like: "/home/runner/work/sw1-latex-exercise-ci/sw1-latex-exercise-ci/24SS/UE01/Unterricht/Lernziele.tex:57:136: info: 'yes': Möglicher Tippfehler gefunden. [AUSTRIAN_GERMAN_SPELLER_RULE]"
+                pattern = (
+                    r"^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+):\s*(?P<type>\w+):\s*(?P<message>.+).*$"
+                )
+                match = re.match(pattern, first_line)
+                global nr_of_total_warnings
+                if match:
+                    file = match.group('file')
+                    file = file.removeprefix(base_dir).removeprefix("/")
+                    files.add(file)
 
-                # Avoid checking especially nested tex files (import), twice
-                if file not in already_checked_files:
-                    nr_of_total_warnings = nr_of_total_warnings + 1
-                    type = match.group('type')
-                    line = int(match.group('line'))
-                    column = int(match.group('column'))
-                    message = match.group('message').strip()
-                    code_snippet = second_line.strip()
-                    suggestions = ""
+                    # Avoid checking especially nested tex files (import), twice
+                    if file not in already_checked_files:
+                        nr_of_total_warnings = nr_of_total_warnings + 1
+                        type = match.group('type')
+                        line = int(match.group('line'))
+                        column = int(match.group('column'))
+                        message = match.group('message').strip()
+                        code_snippet = second_line.strip()
+                        suggestions = ""
 
-                    # Suggestions may span across multiple lines
-                    while (i + step) < len(lines) and not re.match(pattern, lines[i + step]):
-                        suggestions = f'{suggestions}\n{lines[i + step].strip()}'
-                        step = step + 1
+                        # Suggestions may span across multiple lines
+                        while (i + step) < len(lines) and not re.match(pattern, lines[i + step]):
+                            suggestions = f'{suggestions}\n{lines[i + step].strip()}'
+                            step = step + 1
 
-                    if option == choices['comment_in_code_and_make_report_opt'] and line_is_in_diff(line, changedlines):
-                        # Merge multiple notifications for one line in tex file into one SpellingNotification
-                        # to create one PR-review-comment
-                        notif = next(
-                            (n for n in notifications['notifications_to_comment'] if n.file == file and n.line == line),
-                            None)
-                        if notif:
-                            notif.message = f'{notif.message}\n{message}'
-                            notif.suggestions = f'{notif.suggestions}\n{suggestions}'
-                            notif.message_and_suggestions_mixed \
-                                = f'{notif.message_and_suggestions_mixed}\n\n{message}{suggestions}'
+                        if option == choices['comment_in_code_and_make_report_opt'] and line_is_in_diff(line, changedlines):
+                            # Merge multiple notifications for one line in tex file into one SpellingNotification
+                            # to create one PR-review-comment
+                            notif = next(
+                                (n for n in notifications['notifications_to_comment'] if n.file == file and n.line == line),
+                                None)
+                            if notif:
+                                notif.message = f'{notif.message}\n{message}'
+                                notif.suggestions = f'{notif.suggestions}\n{suggestions}'
+                                notif.message_and_suggestions_mixed \
+                                    = f'{notif.message_and_suggestions_mixed}\n\n{message}{suggestions}'
+                            else:
+                                notifications['notifications_to_comment'].append(
+                                    SpellingNotification(file, type, line, column, message, code_snippet, suggestions))
                         else:
-                            notifications['notifications_to_comment'].append(
+                            notifications['notifications_to_report'].append(
                                 SpellingNotification(file, type, line, column, message, code_snippet, suggestions))
-                    else:
-                        notifications['notifications_to_report'].append(
-                            SpellingNotification(file, type, line, column, message, code_snippet, suggestions))
-            else:
-                step = 1
-            i = i + step
+                else:
+                    step = 1
+                i = i + step
 
-        # Notification for lines that are in diff, can be commented directly in the code (PR-review-comment)
-        if len(notifications['notifications_to_comment']) > 0:
-            post_pr_comments(notifications['notifications_to_comment'])
+            # Notification for lines that are in diff, can be commented directly in the code (PR-review-comment)
+            if len(notifications['notifications_to_comment']) > 0:
+                post_pr_comments(notifications['notifications_to_comment'])
 
-        # Update checked files
-        already_checked_files.update(files)
+            # Update checked files
+            already_checked_files.update(files)
 
-        # Notification for lines not in diff, must be reported in an extra report (md-file)
-        return notifications['notifications_to_report']
+            # Notification for lines not in diff, must be reported in an extra report (md-file)
+            return notifications['notifications_to_report']
 
 
 def clean_up_data(data, changed_files_paths):
@@ -303,11 +303,11 @@ def use_ltex(tex_file_path, option, changedlines):
             command = f'script -q -c "{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}" /dev/null | ansi2html > {report_folder}/{tex_file_path}'
             subprocess.run(command, shell=True, check=True)
 
-        # Console output is only captured, need to count warnings for PR-comment
-        global nr_of_total_warnings
-        # Matches lines like: /home/runner/work/sw1-latex-exercise-ci/sw1-latex-exercise-ci/24SS/UE01/Unterricht/Lernziele.tex:57:136: info: 'yes': Möglicher Tippfehler gefunden. [AUSTRIAN_GERMAN_SPELLER_RULE]
-        pattern = r"^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+):\s*(?P<type>\w+):\s*(?P<message>.+).*$"
-        nr_of_total_warnings += count_total_warnings(base_dir, report_folder, tex_file_path, pattern)
+            # Console output is only captured, need to count warnings for PR-comment
+            global nr_of_total_warnings
+            # Matches lines like: /home/runner/work/sw1-latex-exercise-ci/sw1-latex-exercise-ci/24SS/UE01/Unterricht/Lernziele.tex:57:136: info: 'yes': Möglicher Tippfehler gefunden. [AUSTRIAN_GERMAN_SPELLER_RULE]
+            pattern = r"^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+):\s*(?P<type>\w+):\s*(?P<message>.+).*$"
+            nr_of_total_warnings += count_total_warnings(base_dir, report_folder, tex_file_path, pattern)
     else:
         command = f'{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}'
         return analize_report(option, base_dir, command, changedlines)
