@@ -68,7 +68,13 @@
 		"\\documentclass[]{}": "ignore",
 		"\\cite{}": "ignore",
 		"\\cite[]{}": "default",
-		"\\texttt{}": "default"
+		"\\texttt{}": "default",
+		"\\lstset{}": "ignore",
+    "\\newtcolorbox{}{}": "ignore",
+    "\\DeclareNewSectionCommand[]{}": "ignore",
+    "\\NewDocumentEnvironment{}{}": "ignore",
+    "\\newenvironment{}{}{}": "ignore",
+    "\\@ifundefined{}{}{}": "ignore"
 	},
 	"ltex.latex.environments": {
 		"verbatim": "ignore",
