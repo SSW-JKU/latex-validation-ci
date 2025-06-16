@@ -61,7 +61,7 @@ def extract_plain_text_from_html(file_path, for_ltex_purposes=False):
         text = soup.get_text()
 
         # LTeX did not produce any output (and no error was thrown). Analyzed file is fine.
-        if not text and for_ltex_purposes:
+        if not text.strip() and for_ltex_purposes:
             # Find the <body> tag
             body_tag = soup.find('body')
 
