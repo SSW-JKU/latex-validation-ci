@@ -307,7 +307,7 @@ def use_ltex(tex_file_path, option, changedlines):
             global nr_of_total_warnings
             # Matches lines like: /home/runner/work/sw1-latex-exercise-ci/sw1-latex-exercise-ci/24SS/UE01/Unterricht/Lernziele.tex:57:136: info: 'yes': Möglicher Tippfehler gefunden. [AUSTRIAN_GERMAN_SPELLER_RULE]
             pattern = r"^(?P<file>.+?):(?P<line>\d+):(?P<column>\d+):\s*(?P<type>\w+):\s*(?P<message>.+).*$"
-            nr_of_total_warnings += count_total_warnings(base_dir, report_folder, tex_file_path, pattern)
+            nr_of_total_warnings += count_total_warnings(base_dir, report_folder, tex_file_path, pattern, for_ltex_purposes=True)
     else:
         command = f'{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}'
         return analize_report(option, base_dir, command, changedlines)
@@ -376,7 +376,7 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
             # log.info(f'It is time to report by md: {notifications_not_in_diff}')
 
             # Write report for warnings outside diff to summary md file
-            if notifications_not_in_diff:
+            if notifications_not_in_diff is not None:
                 summary_file.add_overview_line(changed_file['path'],
                                                0,
                                                len(notifications_not_in_diff),
@@ -384,6 +384,8 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
 
                 for notification in notifications_not_in_diff:
                     summary_file.add_notification_entry(notification)
+            else:
+                log.warning(f'Attention for {changed_file}: notifications_not_in_diff was None.')
     summary_file.add_details_summary_end()
     log.info('Report finnished.')
 
@@ -409,7 +411,7 @@ def make_md_report_without_comments(option, filtered_paths):
         if not any(path in s for s in already_checked_files):
             notifications = use_ltex(path, option, None)
 
-            if notifications:
+            if notifications is not None:
                 # Write resulting ltex-notifications to md-file
                 # log.info(f'It is time to report by md: {notifications}')
                 summary_file.add_overview_line(path,

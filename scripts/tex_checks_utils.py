@@ -43,12 +43,13 @@ def remove_ansi_escape_sequences(text):
     return ansi_escape.sub('', text)
 
 
-def extract_plain_text_from_html(file_path):
+def extract_plain_text_from_html(file_path, for_ltex_purposes=False):
     """
-        Extract plain text from an HTML file, removing color codes.
+        Extract plain text from an HTML file, removing color codes. (always called by LTeX processing methods)
 
         Args:
             file_path(String): path to html report file (captured console output).
+            for_ltex_purposes (bool): indicates it this method was called in the context of LTeX output processing
 
         Returns:
             string: text of html-file without color coding/ANSI escape sequences
@@ -58,11 +59,26 @@ def extract_plain_text_from_html(file_path):
         # Parse HTML and extract text
         soup = BeautifulSoup(html_content, 'html.parser')
         text = soup.get_text()
-        # Remove any remaining ANSI escape sequences
-        return remove_ansi_escape_sequences(text)
+
+        # LTeX did not produce any output (and no error was thrown). Analyzed file is fine.
+        if not text and for_ltex_purposes:
+            # Find the <body> tag
+            body_tag = soup.find('body')
+
+            # Check if the body tag exists and contains non-whitespace content
+            if body_tag and not body_tag.get_text(strip=True):
+                # The body of the HTML file is empty. Adding placeholder text.
+                body_tag.append("Everything is fine. LTeX did not find any improvements.")
+                with open(file_path, 'w', encoding='utf-8') as write_file:
+                    write_file.write(str(soup))
+            else:
+                print("The body of the HTML file contains content.")
+
+    # Remove any remaining ANSI escape sequences
+    return remove_ansi_escape_sequences(text)
 
 
-def count_total_warnings(base_dir, report_folder, html_report_file_name, pattern):
+def count_total_warnings(base_dir, report_folder, html_report_file_name, pattern, for_ltex_purposes=False):
     """
         Count number of warnings, messages and errors given a chktex or ltex console report (html file)
 
@@ -72,11 +88,12 @@ def count_total_warnings(base_dir, report_folder, html_report_file_name, pattern
             html_report_file_name (string): Name of html report file (captured console output).
             pattern (string): regex pattern to match "raw" ltex-report (console output)
                               as SpellingNotification/LintNotification
+            for_ltex_purposes (bool): indicates it this method was called in the context of LTeX output processing
 
         Returns:
             int: Number of notifications in html-report according to given pattern (warnings/errors/messages)
     """
-    output = extract_plain_text_from_html(f'{base_dir}/{report_folder}/{html_report_file_name}')
+    output = extract_plain_text_from_html(f'{base_dir}/{report_folder}/{html_report_file_name}', for_ltex_purposes)
     lines = output.split("\n")
     i = 0
     nr_of_total_warnings = 0
