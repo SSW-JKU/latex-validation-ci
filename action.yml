@@ -132,7 +132,7 @@ runs:
         else
           CREATE_MD_REPORT="false"
         fi
-        python3 ${{ github.action_path }}/scripts/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir . --lint_summary "$CREATE_MD_REPORT"
+        python3 ${{ github.action_path }}/latex_validation_action/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir . --lint_summary "$CREATE_MD_REPORT"
 
     # ******************** NOTE: Following section has been scratched for the time being, as capturing the raw console output of chktex does not provide any colorcoding or any other immediate benefit (without being processed)
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
@@ -268,7 +268,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
@@ -309,7 +309,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
@@ -343,7 +343,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/scripts/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ github.workspace }}/${{ inputs.build_config }}" --workdir .
 
     - name: Check file length (ltex md-report)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}

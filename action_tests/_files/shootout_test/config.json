@@ -1,0 +1,8 @@
+{
+  "activeSemester": "25ST",
+  "entryPoints": {
+    "exercise": "exercise.tex",
+    "lesson": "lesson.tex"
+  },
+  "exercises": ["Ex01", "Ex02", "Ex03", "Ex04", "Ex05"]
+}
