@@ -84,6 +84,7 @@ jobs:
         uses: ./
         if: always()
         with:
+          working_directory: "/tmp/test-locals/shootout_test/"
           build_config: "config.json"
 
       # - name: Verify integration test 1
