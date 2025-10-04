@@ -86,6 +86,10 @@ jobs:
         with:
           working_directory: "/tmp/test-locals/shootout_test/"
           build_config: "config.json"
+          changed_files: |
+            25ST/Ex02/Aufgabe/exercise.tex
+            25ST/Ex02/Unterricht/lesson.tex
+            25ST/config.tex
 
       # - name: Verify integration test 1
       #   if: always()

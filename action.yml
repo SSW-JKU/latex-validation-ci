@@ -57,6 +57,10 @@ inputs:
     description: "The working directory to use"
     required: false
     default: ${{ github.workspace }}
+  changed_files:
+    description: "List of changed files. If these are not provided, we use dorny to detect changes in the repository"
+    required: false
+    default: ""
 
 #outputs:
 #  sample_output:
@@ -74,16 +78,27 @@ runs:
       id: filter
       with:
         working-directory: ${{ inputs.working_directory }}
-        list-files: 'json'
+        list-files: 'csv'
         filters: |
           changed:
             - added|modified: '**/*.tex'
+
+    - name: Set changed_files variable
+      id: set-changed-files
+      # use as follows: ${{ steps.set-changed-files.outputs.changed_files }}
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.changed_files }}" ]; then
+          echo "changed_files=${{ inputs.changed_files }}" >> $GITHUB_OUTPUT
+        else
+          echo "changed_files=${{ steps.filter.outputs.changed }}" >> $GITHUB_OUTPUT
+        fi
 
     - name: Print changed files
       shell: bash
       run: |
         echo "Changed Files:"
-        echo ${{ steps.filter.outputs.changed_files }}
+        echo ${{ steps.set-changed-files.outputs.changed_files }}
 
     # Create symbolic link for requirements.txt (https://github.com/actions/setup-python/issues/361#issuecomment-2530429607)
     # to work around https://github.com/actions/setup-python/issues/361
@@ -137,7 +152,7 @@ runs:
         else
           CREATE_MD_REPORT="false"
         fi
-        python3 ${{ github.action_path }}/latex_validation_action/lint_texs.py --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}" --lint_summary "$CREATE_MD_REPORT"
+        python3 ${{ github.action_path }}/latex_validation_action/lint_texs.py --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}" --lint_summary "$CREATE_MD_REPORT"
 
     # ******************** NOTE: Following section has been scratched for the time being, as capturing the raw console output of chktex does not provide any colorcoding or any other immediate benefit (without being processed)
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
@@ -273,7 +288,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
@@ -314,7 +329,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
@@ -348,7 +363,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     - name: Check file length (ltex md-report)
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
@@ -401,7 +416,7 @@ runs:
       if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
-        python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.filter.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --changedlines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir "${{ inputs.working_directory }}"
+        python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --changedlines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir "${{ inputs.working_directory }}"
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
