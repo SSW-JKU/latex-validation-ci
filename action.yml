@@ -75,6 +75,7 @@ runs:
     # ******************************************************************************************************************
 
     - uses: dorny/paths-filter@v3
+      if: ${{ inputs.changed_files == '' }}
       id: filter
       with:
         working-directory: ${{ inputs.working_directory }}
