@@ -108,7 +108,7 @@ runs:
       shell: bash
     # install Python
     - name: Setup Python
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       uses: actions/setup-python@v6
       with:
         cache: "pip"
@@ -116,7 +116,7 @@ runs:
         cache-dependency-path: '**/action_requirements.txt'
 
     - name: Install Python dependencies
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       working-directory: ${{ github.action_path }}
       shell: bash
       run: |
@@ -130,19 +130,19 @@ runs:
 
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
          sudo apt install colorized-logs
 
     - name: Set lint reports path
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       shell: bash
       run: |
         echo "LINT_REPORT_FOLDER=${{ inputs.lint_report_folder }}" >> $GITHUB_ENV
 
     - name: Lint check (chktex)
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       shell: bash
       run: |
         chmod +x ${{ github.action_path }}/chktex/chktex
@@ -159,7 +159,7 @@ runs:
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
     # Upload the ZIP file as an artifact
     #- name: Upload ZIP artifact (captured chktex console-output)
-    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
     #  id: artifact-upload-chktex-report-step
     #  uses: actions/upload-artifact@v4
     #  with:
@@ -168,7 +168,7 @@ runs:
 
     # Create a pull request review comment (with the artifact link)
     #- name: Post PR comment (with link to zip artifact)
-    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
     #  uses: actions/github-script@v7
     #  with:
     #    script: |
@@ -185,7 +185,7 @@ runs:
 
     # Delete all html reports (chktex_reports)
     #- name: Delete all files in chktex_reports
-    #  if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
+    #  if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_zipped_report == 'true' && env.TOTAL_LINT_WARNINGS_ZIP > 0 }}
     #  shell: bash
     #  run: |
     #    rm -rf chktex_reports
@@ -193,7 +193,7 @@ runs:
     # --------------------------------------- Create PR-comment with chktex-report md ---------------------------------------
 
     - name: Check file length (chktex md-report)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       shell: bash
       run: |
         FILE_PATH="./lint_summary.md"
@@ -205,7 +205,7 @@ runs:
         fi
 
     - name: Post Chktex-Lint Report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 && env.FILE_LENGTH_CHKTEX < 65536 }}
+      if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_md_report == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 && env.FILE_LENGTH_CHKTEX < 65536 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./lint_summary.md
@@ -213,14 +213,14 @@ runs:
     # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
 
     - name: Upload GITHUB_STEP_SUMMARY
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       shell: bash
       run: |
         cat lint_summary.md >> $GITHUB_STEP_SUMMARY
 
     # Create a pull request review comment (with the step summary link)
     - name: Post PR comment (with GITHUB_STEP_SUMMARY link)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_LINT_WARNINGS_REPORT > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -242,14 +242,14 @@ runs:
 
     # Install required java
     - uses: actions/setup-java@v4
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       with:
         distribution: 'temurin'
         java-version: '21'
 
     # Define the URL of the .tar.gz file
     - name: Set .tar.gz file URL
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       shell: bash
       run: |
         echo "ltex-plus version: ${{ inputs.ltex_plus_version }}"
@@ -257,7 +257,7 @@ runs:
 
     # Restore the cache
     - name: Restore .tar.gz file cache
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       id: cache-ltex
       uses: actions/cache@v3
       with:
@@ -266,7 +266,7 @@ runs:
 
     # Download and extract the .tar.gz file if not cached
     - name: Download .tar.gz file
-      if: ${{ steps.filter.outputs.changed == 'true' && steps.cache-ltex.outputs.cache-hit != 'true'}}
+      if: ${{ inputs.changed_files != '' && steps.cache-ltex.outputs.cache-hit != 'true'}}
       shell: bash
       run: |
         # Download and extract LTEX LS
@@ -275,7 +275,7 @@ runs:
         rm ltex-ls-plus-${{ inputs.ltex_plus_version }}-linux-x64.tar.gz
 
     - name: Set ltex-plus and spelling reports path
-      if: ${{ steps.filter.outputs.changed == 'true' }}
+      if: ${{ inputs.changed_files != '' }}
       shell: bash
       run: |
         echo "LTEX_PLUS_DIR=ltex-ls-plus-${{ inputs.ltex_plus_version }}/bin/ltex-cli-plus" >> $GITHUB_ENV
@@ -286,14 +286,14 @@ runs:
 
     # Spell check with ltex-plus and save into folder ltex_reports
     - name: Spell check with ltex (ZIPP_CONSOLE_REPORT)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
         python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       id: artifact-upload-ltex-report-step
       uses: actions/upload-artifact@v4
       with:
@@ -302,7 +302,7 @@ runs:
 
     # Create a pull request review comment (with the artifact link)
     - name: Post PR comment (with link to zip artifact)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -319,7 +319,7 @@ runs:
 
     # Delete all html reports (ltex_reports)
     - name: Delete all files in ltex_reports
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
           rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
@@ -327,20 +327,20 @@ runs:
     # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
 
     - name: Spell check with ltex (GITHUB_STEP_SUMMARY)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
       shell: bash
       run: |
         python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
           cat spell_check_report.md >> $GITHUB_STEP_SUMMARY
 
     # Create a pull request review comment (with the step summary link)
     - name: Post PR comment (wit GITHUB_STEP_SUMMARY link)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       uses: actions/github-script@v7
       with:
         script: |
@@ -361,13 +361,13 @@ runs:
 
     # Spell check with ltex-plus and save into folder ltex_reports
     - name: Spell check with ltex (WRITE_MD_REPORT_AS_PR_COMMENT)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report == 'true' }}
       shell: bash
       run: |
         python3 ${{ github.action_path }}/latex_validation_action/spell-check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
 
     - name: Check file length (ltex md-report)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
         FILE_PATH="./spell_check_report.md"
@@ -379,7 +379,7 @@ runs:
         fi
 
     - name: Post Chktex-Lint report (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_LTEX < 65536  }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_LTEX < 65536  }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
@@ -387,7 +387,7 @@ runs:
     # ************************************ Comment directly in code and post remaining warnings as md-report as pr-comment ************************************************
     # Retrieve diffs, gets changed lines, content, files etc.
     - uses: GrantBirki/git-diff-action@v2.8.0
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       id: git-diff-action
       with:
         json_diff_file_output: diff.json
@@ -395,7 +395,7 @@ runs:
         file_output_only: "true"
 
     - name: Check if JSON diff file exists
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
         echo "github token: ${{ inputs.github_token }}"
@@ -408,13 +408,13 @@ runs:
 
     # Print the diff in JSON format
     - name: Print json diff
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: cat $GITHUB_WORKSPACE/diff.json
 
     # Spell check with ltex-plus and save into folder ltex_reports
     - name: Spell check with ltex (WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
         python3 .github/scripts/test_exercise_files/spell-check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --changedlines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir "${{ inputs.working_directory }}"
@@ -423,7 +423,7 @@ runs:
 
     # Check if file length exceeds pr-comment max. message-body-length
     - name: Check file length (ltex md-report)
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
         FILE_PATH="./spell_check_report.md"
@@ -435,7 +435,7 @@ runs:
         fi
 
     - name: Post Chktex-Lint's remaining warnings (md file) as PR-comment
-      if: ${{ steps.filter.outputs.changed == 'true' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_REMAINING_LTEX < 65536 }}
+      if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 && env.FILE_LENGTH_REMAINING_LTEX < 65536 }}
       uses: thollander/actions-comment-pull-request@v3
       with:
         file-path: ./spell_check_report.md
