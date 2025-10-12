@@ -1,46 +1,38 @@
 name: "LaTeX Validation Action"
 description: "Validates (spell/grammar checks and lints) the LaTeX files of the SSW lectures and exercises"
 inputs:
-  python_version:
-    description: "Python version to use"
-    required: false
-    default: "3.13"
   build_config:
     description: "Relative path to the build Config (e.g .lecture-build-ci.json)"
     required: false
-    default: '.lecture-build-ci.json'
+    default: ".lecture-build-ci.json"
   lint_pr_comment_with_link_to_GITHUB_SUMMARY:
-    description: 'For linting: create chktex-report as GITHUB_STEP_SUMMARY'
+    description: "For linting: create chktex-report as GITHUB_STEP_SUMMARY"
     required: false
-    default: 'false'
+    default: "false"
   lint_pr_comment_with_md_report:
-    description: 'For linting: create chktex-report (md file) and post as PR-comment'
+    description: "For linting: create chktex-report (md file) and post as PR-comment"
     required: false
-    default: 'false'
-  chktex_version:
-    description: "CHKTEX version to use"
-    required: false
-    default: "1.7.9"
+    default: "false"
   lint_report_folder:
     description: "Relative path where html-chktex-lint-reports (captured console output) is saved intermediately."
     required: false
     default: "chktex_reports"
   spellcheck_comment_with_zipped_report:
-    description: 'For spell checking: create PR-comment with ltex-reports packaged as zip'
+    description: "For spell checking: create PR-comment with ltex-reports packaged as zip"
     required: false
-    default: 'false'
+    default: "false"
   spellcheck_comment_with_link_to_GITHUB_SUMMARY:
-    description: 'For spell checking: create ltex-report as GITHUB_STEP_SUMMARY'
+    description: "For spell checking: create ltex-report as GITHUB_STEP_SUMMARY"
     required: false
-    default: 'false'
+    default: "false"
   spellcheck_comment_with_md_report:
-    description: 'For spell checking: create ltex-report (md file) and post as PR-comment'
+    description: "For spell checking: create ltex-report (md file) and post as PR-comment"
     required: false
-    default: 'false'
+    default: "false"
   spellcheck_comment_with_md_report_and_comment_in_code:
-    description: 'For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment'
+    description: "For spell checking: create in-code-comments and for remaining ltex-warning report (md file) and post as PR-comment"
     required: false
-    default: 'false'
+    default: "false"
   ltex_plus_version:
     description: "Ltex-plus version to use"
     required: false
@@ -53,6 +45,24 @@ inputs:
     description: "Workflow Github token from secrets"
     required: false
     default: ${{ github.token }}
+  # TODO: these are properly "vetted"
+  python_version:
+    description: "Python version to use"
+    required: false
+    default: "3.13"
+  texlive_version:
+    description: "TeX Live version to use"
+    required: false
+    default: "2024"
+  texlive_packages:
+    description: "TeX Live packages to install"
+    required: false
+    default: >-
+      scheme-basic
+  chktex_version:
+    description: "ChkTeX version to use"
+    required: false
+    default: "1.7.9"
   working_directory:
     description: "The working directory to use"
     required: false
@@ -79,7 +89,7 @@ runs:
       id: filter
       with:
         working-directory: ${{ inputs.working_directory }}
-        list-files: 'csv'
+        list-files: "csv"
         filters: |
           changed:
             - added|modified: '**/*.tex'
@@ -113,7 +123,7 @@ runs:
       with:
         cache: "pip"
         python-version: ${{ inputs.python_version }}
-        cache-dependency-path: '**/action_requirements.txt'
+        cache-dependency-path: "**/action_requirements.txt"
 
     - name: Install Python dependencies
       if: ${{ inputs.changed_files != '' }}
@@ -122,6 +132,13 @@ runs:
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade setuptools
+
+    # install TeX live + install required dependencies
+    - name: Setup TeX Live
+      uses: zauguin/install-texlive@v4
+      with:
+        texlive_version: ${{ inputs.texlive_version }}
+        packages: ${{ inputs.texlive_packages }}
 
     # ******************************************************************************************************************
     # ******************************************* lint_changed_texs ****************************************************
@@ -132,8 +149,7 @@ runs:
     - name: Install ansi2html (included in colorized-logs)
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
-      run: |
-         sudo apt install colorized-logs
+      run: sudo apt install colorized-logs
 
     - name: Set lint reports path
       if: ${{ inputs.changed_files != '' }}
@@ -145,8 +161,8 @@ runs:
       if: ${{ inputs.changed_files != '' }}
       shell: bash
       run: |
-        chmod +x ${{ github.action_path }}/chktex/chktex
-        chmod +x ${{ github.action_path }}/chktexrc.in
+        # chmod +x ${{ github.action_path }}/chktex/chktex
+        # chmod +x ${{ github.action_path }}/chktexrc.in
 
         if [[ -n "${{ inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY }}" || -n "${{ inputs.lint_pr_comment_with_md_report }}" ]]; then
           CREATE_MD_REPORT="true"
@@ -244,8 +260,8 @@ runs:
     - uses: actions/setup-java@v4
       if: ${{ inputs.changed_files != '' }}
       with:
-        distribution: 'temurin'
-        java-version: '21'
+        distribution: "temurin"
+        java-version: "21"
 
     # Define the URL of the .tar.gz file
     - name: Set .tar.gz file URL
@@ -280,7 +296,6 @@ runs:
       run: |
         echo "LTEX_PLUS_DIR=ltex-ls-plus-${{ inputs.ltex_plus_version }}/bin/ltex-cli-plus" >> $GITHUB_ENV
         echo "SPELLING_REPORT_FOLDER=${{ inputs.spelling_report_folder }}" >> $GITHUB_ENV
-
 
     # --------------------------------------- Capture console output into zipped html-report(s) ---------------------------------------
 
@@ -322,7 +337,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
-          rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
+        rm -rf ${{ env.SPELLING_REPORT_FOLDER }}
 
     # --------------------------------------- Create report as GITHUB_STEP_SUMMARY ---------------------------------------
 
@@ -336,7 +351,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
       shell: bash
       run: |
-          cat spell_check_report.md >> $GITHUB_STEP_SUMMARY
+        cat spell_check_report.md >> $GITHUB_STEP_SUMMARY
 
     # Create a pull request review comment (with the step summary link)
     - name: Post PR comment (wit GITHUB_STEP_SUMMARY link)
@@ -355,7 +370,6 @@ runs:
             body: commentBody,
           });
           console.log(`Comment created.`)
-
 
     # --------------------------------------- Post md-report as pr-comment ---------------------------------------
 
