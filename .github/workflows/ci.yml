@@ -62,7 +62,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.13"]
-        texlive-version: ["2024", "2025"]
+        texlive-version: ["2025"] # TODO: enable as well: "2024"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v6
