@@ -144,6 +144,33 @@ runs:
     # ******************************************* lint_changed_texs ****************************************************
     # ******************************************************************************************************************
 
+    - name: Set up ChKTeX cache
+      id: cache-chktex
+      uses: actions/cache@v4
+      with:
+        path: ~/chktex-bin
+        key: chktex-${{ inputs.chktex_version }}
+
+    - name: Download and install ChkTeX
+      if: ${{ steps.cache-chktex.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        mkdir -p ~/chktex-src
+        cd ~/chktex-src
+        curl -L "http://download.savannah.gnu.org/releases/chktex/chktex-${{ inputs.chktex_version }}.tar.gz" -o chktex.tar.gz
+        tar -xzf chktex.tar.gz
+        cd chktex-${{ inputs.chktex_version }}
+        ./configure --prefix=$HOME/chktex-bin
+        make
+        make install
+
+    - name: Add ChkTeX to PATH
+      shell: bash
+      run: echo "$HOME/chktex-bin/bin" >> $GITHUB_PATH
+
+    - name: Verify ChkTeX installation
+      shell: bash
+      run: chktex --version
 
     # Install ansi2html for reports, required by "create PR-comment with reports packaged as zip"
     - name: Install ansi2html (included in colorized-logs)

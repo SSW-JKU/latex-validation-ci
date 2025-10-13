@@ -15,7 +15,7 @@ already_checked_files = set()
 nr_of_total_warnings_for_zip = 0
 nr_of_total_warnings_for_md_file = 0
 
-CHKTEX_EXEC_REL_PATH = 'chktex/chktex'
+# CHKTEX_EXEC_REL_PATH = 'chktex'
 CHKTEX_CONFIG_FILE_REL_PATH = 'chktexrc.in'
 
 
@@ -165,8 +165,8 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     print(f'tex-file: {tex_file_abs_path}')
     config_file_abs_path = os.path.join(action_base_dir, CHKTEX_CONFIG_FILE_REL_PATH)
     print(f'config-file: {config_file_abs_path}')
-    chktex_path = os.path.join(action_base_dir, CHKTEX_EXEC_REL_PATH)
-    print(f'chktex: {chktex_path}')
+    # chktex_path = os.path.join(action_base_dir, CHKTEX_EXEC_REL_PATH)
+    # print(f'chktex: {chktex_path}')
 
     # Create report file path
     parts = tex_file_path.split('/')
@@ -184,7 +184,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
         os.makedirs(f'{base_dir}/{report_folder}', exist_ok=True)
 
         # Perform spell check and save console output to html-file
-        command = f'script -q -c "{chktex_path} -g -l {config_file_abs_path} {tex_file_abs_path}" /dev/null | ansi2html > {report_folder}/{html_report_path}'
+        command = f'script -q -c "chktex -g -l {config_file_abs_path} {tex_file_abs_path}" /dev/null | ansi2html > {report_folder}/{html_report_path}'
         subprocess.run(command, shell=True, check=True)
 
         # Console output is only captured, need to count warnings for PR-comment
@@ -195,7 +195,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
 
     # Perform linting, process output and create md. file
     if create_md_summary:
-        command = f'script -q -c "{chktex_path} -g -l {config_file_abs_path} {tex_file_abs_path}" /dev/null'
+        command = f'script -q -c "chktex -g -l {config_file_abs_path} {tex_file_abs_path}" /dev/null'
         if not summary_file:
             log.error("Summary file is none, writing report not feasible.")
         else:
