@@ -470,7 +470,7 @@ def main():
     log.info(f'Added/Modified tex-file lines: {args.changedlines}')
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths = [p for p in eval(args.changedfiles) if config_file.active_semester in p]
+    filtered_paths = [p for p in args.changedfiles.split(',') if config_file.active_semester in p]
     log.info(f'Changed tex-files from {config_file.active_semester}: {filtered_paths}')
 
     # Perform spell-check and provide result depending on args.option
