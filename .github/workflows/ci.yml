@@ -3,48 +3,61 @@ name: Action CI
 on: push
 
 jobs:
-  lint:
-    name: "Lint+typecheck"
+  pre-commit:
+    name: "Pre-commit (lint + format)"
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          cache: "pip"
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-groups
+      - uses: pre-commit/action@v3.0.1
+
+  typecheck:
+    name: "Type Check"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
       - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade setuptools
-          pip install -r requirements.txt
-      - name: Lint
-        run: make lint
-      - name: Type check
-        run: make typecheck
+        run: uv sync --all-groups
+      - name: Run type check
+        run: uv run mypy
 
   unit-test:
     name: "Unit Test"
     runs-on: ubuntu-latest
-    needs: ["lint"]
+    needs: ["pre-commit", "typecheck"]
     strategy:
       matrix:
         python-version: ["3.13"]
-        texlive-version: ["2025"] # TODO: enable 2024 again
-        # texlive-version: ["2024", "2025"]
+        texlive-version: ["2026"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          cache: "pip" # caching pip dependencies
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
       - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade setuptools
-          pip install -r requirements.txt
+        run: uv sync --all-groups
       - name: Setup TeX Live
         uses: zauguin/install-texlive@v4
         with:
@@ -53,72 +66,142 @@ jobs:
             scheme-basic
             latexmk
       - name: Run unittests
-        run: make test
+        run: uv run pytest
 
   integration-test:
-    name: "Integration Test"
+    name: "Integration Test (${{ matrix.scenario }})"
     runs-on: ubuntu-latest
     needs: ["unit-test"]
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.13"]
-        texlive-version: ["2025"] # TODO: enable as well: "2024"
+        texlive-version: ["2026"]
+        scenario:
+          - shootout_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          cache: "pip" # caching pip dependencies
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
       - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade setuptools
-          pip install -r requirements.txt
+        run: uv sync --all-groups
 
-      # Integration test 1
+      - name: Prepare scenario
+        run: uv run gh-action-integration-test --scenario-dir "action_tests/defs" prepare ${{ matrix.scenario }}
 
-      - name: Prepare repositories and test files
-        run: python -m action_tests
-
-      - name: "Integration test 1: Shootout test"
-        id: integration-test-1
+      - name: Run scenario
+        id: test-execution
         uses: ./
-        if: always()
+        # scenarios named *_failure_* are expected to fail the action
+        continue-on-error: ${{ contains(matrix.scenario, '_failure_') }}
         with:
           working_directory: "/tmp/test-locals/shootout_test/"
           build_config: "config.json"
           changed_files: 25ST/Ex02/Aufgabe/exercise.tex,25ST/Ex02/Unterricht/lesson.tex,25ST/config.tex
 
-      # - name: Verify integration test 1
-      #   if: always()
-      #   run: python -m action_tests --check old_build_success_no_checksum ${{ steps.integration-test-1.outcome }}
+      - name: Verify scenario
+        if: always()
+        run: uv run gh-action-integration-test --scenario-dir "action_tests/defs" verify ${{ steps.test-execution.outcome }} ${{ matrix.scenario }}
+
+  # --- Release pipeline: only runs for v* tags pointing at a commit on main ---
+
+  guard:
+    name: "Release prerequisite: version tagged main"
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      on_main: ${{ steps.check.outputs.on_main }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          git fetch origin main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $GITHUB_REF_NAME is not on main, skipping."
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  changelog:
+    name: "Update changelog"
+    needs: ["guard", "unit-test", "integration-test"]
+    if: needs.guard.outputs.on_main == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: changelog
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Runs on the tagged commit, so the new tag is the newest release section.
+      # Output goes to a temp name so switching branches can't clash with an
+      # existing CHANGELOG.md.
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.generated.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Commit changelog to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git pull --ff-only origin main
+          mv CHANGELOG.generated.md CHANGELOG.md
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "Changelog unchanged."
+            exit 0
+          fi
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): update for $GITHUB_REF_NAME [skip ci]"
+          git push origin main
 
   deploy:
     name: "Create release"
-    needs: ["unit-test"]
-    if: "${{ startsWith(github.ref, 'refs/tags/') }}"
+    needs: ["guard", "unit-test", "integration-test"]
+    if: needs.guard.outputs.on_main == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # read changelog for release notes
-      - name: Prepare release notes
-        id: changelog
-        run: |
-          TAG_NAME="${GITHUB_REF##*/}"
-          echo "TAG=$TAG_NAME" >> $GITHUB_ENV
-          NOTES=$(awk "/^## \[${TAG_NAME:1}\]/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          cat $GITHUB_ENV
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/checkout@v6
         with:
-          tag_name: ${{ env.TAG }}
-          name: Release ${{ env.TAG }}
-          body: ${{ env.RELEASE_NOTES }}
+          fetch-depth: 0
+
+      # Notes for just this tag, generated from the commits since the previous one
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .cliff.toml
+          args: --latest --strip header
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          # Tags like v1.2.0-rc.1 are published as pre-releases
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Release $GITHUB_REF_NAME" \
+            --notes-file RELEASE_NOTES.md \
+            --verify-tag \
+            $flags
