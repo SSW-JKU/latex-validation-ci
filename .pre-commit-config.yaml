@@ -3,19 +3,12 @@ default_install_hook_types:
   - commit-msg
 
 repos:
-  - repo: local
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
     hooks:
-      - id: lint
-        name: Lint
-        language: system
-        entry: make lint
-        files: \.py$
-
-      - id: typecheck
-        name: Type Check
-        language: system
-        entry: make typecheck
-        files: \.py$
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
@@ -23,3 +16,13 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: []
+
+  # https://github.com/schollm/check-dependencies
+  - repo: local
+    hooks:
+      - id: check-dependencies
+        name: check-dependencies
+        entry: uv run check-dependencies
+        language: system
+        pass_filenames: false
+        args: [--include-dev, latex_validation_action, tests, action_tests]

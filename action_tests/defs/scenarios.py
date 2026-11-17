@@ -2,12 +2,7 @@
 Defines various integration test scenarios and their verification steps.
 """
 
-from action_tests.scenario import Scenario, ScenarioManager
-
-from .test_repository import TestRepository
-
-SUCCESS_OUTCOME = "success"
-FAILURE_OUTCOME = "failure"
+from gh_action_integration_test import Scenario, TestRepository
 
 
 class ShootoutTestScenario(Scenario):
@@ -16,11 +11,8 @@ class ShootoutTestScenario(Scenario):
     """
 
     def __init__(self) -> None:
-        super().__init__("shootout_test", SUCCESS_OUTCOME)
+        super().__init__("shootout_test", "success")
 
     def verify(self, repo: TestRepository) -> None:
         print(f"Verifying scenario: {self.name}")
         print("Shoot-out tests require no verification")
-
-
-SCENARIOS = ScenarioManager(ShootoutTestScenario())

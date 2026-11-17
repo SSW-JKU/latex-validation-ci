@@ -1,8 +1,8 @@
-# Created by https://www.toptal.com/developers/gitignore/api/latex,python,macos,windows,linux
-# Edit at https://www.toptal.com/developers/gitignore?templates=latex,python,macos,windows,linux
-
 # Test directories
 testdir/
+
+# Created by https://www.toptal.com/developers/gitignore/api/latex,python,macos,windows,linux
+# Edit at https://www.toptal.com/developers/gitignore?templates=latex,python,macos,windows,linux
 
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
