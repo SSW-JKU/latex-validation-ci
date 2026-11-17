@@ -33,13 +33,13 @@ def get_repo_and_action_path_env_variables() -> tuple[str, str]:
     return base_dir, action_base_dir
 
 
-def remove_ansi_escape_sequences(text) -> str:
+def remove_ansi_escape_sequences(text: str) -> str:
     """Remove ANSI escape sequences from a string text."""
     ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
     return ansi_escape.sub("", text)
 
 
-def extract_plain_text_from_html(file_path, for_ltex_purposes=False) -> str:
+def extract_plain_text_from_html(file_path: str, for_ltex_purposes: bool = False) -> str:
     """Extract plain text from an HTML file, removing color codes.
 
     This is always called by LTeX processing methods).
@@ -76,7 +76,9 @@ def extract_plain_text_from_html(file_path, for_ltex_purposes=False) -> str:
     return remove_ansi_escape_sequences(text)
 
 
-def count_total_warnings(base_dir, report_folder, html_report_file_name, pattern, for_ltex_purposes=False) -> int:
+def count_total_warnings(
+    base_dir: str, report_folder: str, html_report_file_name: str, pattern: str, for_ltex_purposes: bool = False
+) -> int:
     """Count number of warnings, messages and errors given a chktex or ltex console report (html file).
 
     Args:

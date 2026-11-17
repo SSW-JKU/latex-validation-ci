@@ -1,14 +1,21 @@
-#!/usr/bin/env python
 import os
 import threading
 
-from tex_checks_utils import get_repo_and_action_path_env_variables
+from .lint_texs import LintNotification
+from .spell_check_texs import SpellingNotification
+from .tex_checks_utils import get_repo_and_action_path_env_variables
 
 file_lock = threading.Lock()
 
 
 class SummaryMdFile:
-    def __init__(self, file_name, total_files, make_content_expandable=True, is_complementary_to_code_comments=False):
+    def __init__(
+        self,
+        file_name: str,
+        total_files: int,
+        make_content_expandable: bool = True,
+        is_complementary_to_code_comments: bool = False,
+    ):
         """Multiplies two numbers and returns the result.
 
         Args:
@@ -49,7 +56,7 @@ class SummaryMdFile:
             if self.add_details_summary:
                 f.write(b"<details>\n<summary>Click to expand full report</summary>\n\n\n")
 
-    def add_overview_line(self, tex_file_path, nr_errors, nr_warnings, nr_messages):
+    def add_overview_line(self, tex_file_path: str, nr_errors: int, nr_warnings: int, nr_messages: int) -> None:
         """Adds header of a bundle of notifications for a specific tex file.
 
         Args:
@@ -57,9 +64,6 @@ class SummaryMdFile:
             nr_errors (int): number of errors for tex_file_path.
             nr_warnings (int): number of errors for tex_file_path.
             nr_messages (int): number of errors for tex_file_path.
-
-        Returns:
-            void
 
         """
         with file_lock:
@@ -69,7 +73,7 @@ class SummaryMdFile:
                     f"{nr_errors} errors printed, {nr_warnings} warnings printed, {nr_messages} messages printed\n\n".encode()
                 )
 
-    def add_notification_entry(self, notification):
+    def add_notification_entry(self, notification: SpellingNotification | LintNotification) -> None:
         """Writes information of notification by spell-checker or linter to md-file.
 
         Args:
@@ -106,6 +110,6 @@ class SummaryMdFile:
             else:
                 print("Error: Incorrect notification type.")
 
-    def add_details_summary_end(self):
+    def add_details_summary_end(self) -> None:
         with file_lock, open(self.file_name, "ab+") as f:
             f.write(b"</details>")

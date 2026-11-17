@@ -2,7 +2,8 @@
 Defines various integration test scenarios and their verification steps.
 """
 
-from gh_action_integration_test import Scenario, TestRepository
+from gh_action_integration_test.git.repository import TestRepository
+from gh_action_integration_test.scenario import Scenario
 
 
 class ShootoutTestScenario(Scenario):

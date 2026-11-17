@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import logging as log
 import os
@@ -5,48 +6,54 @@ import re
 import subprocess
 from pathlib import Path
 
-from config import Config
-from summary_md_file import SummaryMdFile
-from tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
+from .config import Config
+from .summary_md_file import SummaryMdFile
+from .tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
 
-already_checked_files = set()
-nr_of_total_warnings_for_zip = 0
-nr_of_total_warnings_for_md_file = 0
+already_checked_files: set[str] = set()
+nr_of_total_warnings_for_zip: int = 0
+nr_of_total_warnings_for_md_file: int = 0
 
 # CHKTEX_EXEC_REL_PATH = 'chktex'
 CHKTEX_CONFIG_FILE_REL_PATH = "chktexrc.in"
 
 
 class LintNotification:
-    def __init__(self, file: str, type: str, line: int, message: str, code_snippet: str):
+    file: str
+    type: str
+    line: int
+    message: str
+    code_snippet: str
+
+    def __init__(self, file: str, type: str, line: int, message: str, code_snippet: str) -> None:
         self.file = file
         self.type = type
         self.line = line
         self.message = message
         self.code_snippet = code_snippet
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"LintNotification(file={self.file},"
             f"type={self.type}, line={self.line}, message={self.message}, code_snippet={self.code_snippet})"
         )
 
 
-def find_line_number(filename, target_string):
-    with open(filename) as file:
+def find_line_number(filename: str | Path, target_string: str) -> int | None:
+    with open(filename, encoding="UTF-8") as file:
         for line_number, line in enumerate(file, start=1):
             if target_string in line:
                 return line_number
     return None
 
 
-def uncomment_prelude_import(tex_file_abs_path, target_line, do_uncomment):
+def uncomment_prelude_import(tex_file_abs_path: str | Path, target_line: int, do_uncomment: bool) -> None:
     if do_uncomment:
         replacement = "%\\input{../../prelude}\n"
     else:
         replacement = "\\input{../../prelude}\n"
 
-    with open(tex_file_abs_path) as file:
+    with open(tex_file_abs_path, encoding="UTF-8") as file:
         lines = file.readlines()
         with open(tex_file_abs_path, "w") as updated_file:
             if target_line <= len(lines):
@@ -57,7 +64,7 @@ def uncomment_prelude_import(tex_file_abs_path, target_line, do_uncomment):
                 print(f"Line {target_line} does not exist in the file.")
 
 
-def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdFile):
+def analize_report(base_dir: str, command: str, target_file_path: str, summary_file: SummaryMdFile) -> None:
     """Performs linting (with chktex) on specified tex file,
     collects the chktex-warnings/errors/messages (notifications) and writes them to a report file (md-file).
 
@@ -66,9 +73,6 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
         command (str): chktex command to perform linting on a specific chktex file, considering a chktex-config file
         target_file_path(str): relative path to tex file to be linted
         summary_file (SummaryMdFile): summary file object where are notifications are written (md-file)
-
-    Returns:
-        List(LintNotifications): Collection of remaining notifications
 
     """
     try:
@@ -79,9 +83,9 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
 
         # Run over lines of raw chktex-report and parse warnings/errors/messages into objects LintNotification
         i = 0
-        files = set()
-        notifications = []
-        nr_of_notifications = {"Error": 0, "Warning": 0, "Message": 0}
+        files: set[str] = set()
+        notifications: list[LintNotification] = []
+        nr_of_notifications: dict[str, int] = {"Error": 0, "Warning": 0, "Message": 0}
         while i < len(lines):
             first_line = lines[i]
             second_line = lines[i + 1] if i + 1 < len(lines) else ""
@@ -104,9 +108,8 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
                     line = int(match.group(4))
                     message = match.group(5)
                     code_snippet = f"{second_line}\n{third_line}"
-                    nr_of_notifications.update(
-                        {type.split(maxsplit=1)[0]: (nr_of_notifications.get(type.split(maxsplit=1)[0]) + 1)}
-                    )
+                    notification_kind = type.split(maxsplit=1)[0]
+                    nr_of_notifications[notification_kind] = nr_of_notifications[notification_kind] + 1
 
                     # A message may span across multiple lines
                     while (i + step) < len(lines) and not re.match(pattern, lines[i + step]):
@@ -122,9 +125,9 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
             # Write report to summary md file
             summary_file.add_overview_line(
                 target_file_path,
-                nr_of_notifications.get("Error"),
-                nr_of_notifications.get("Warning"),
-                nr_of_notifications.get("Message"),
+                nr_of_notifications["Error"],
+                nr_of_notifications["Warning"],
+                nr_of_notifications["Message"],
             )
 
             for notification in notifications:
@@ -140,7 +143,12 @@ def analize_report(base_dir, command, target_file_path, summary_file: SummaryMdF
         print(output)
 
 
-def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: bool, summary_file: SummaryMdFile):
+def use_chktex(
+    tex_file_path: str,
+    create_zipped_report: bool,
+    create_md_summary: bool,
+    summary_file: SummaryMdFile | None,
+) -> None:
     """Performs linting on the tex file specified,
     the resulting chktex-warnings/messages/errors (notifications) will be provided, depending on option:
         as captured-console-output in html or
@@ -150,10 +158,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
         tex_file_path (str): Path to tex file to be linted.
         create_zipped_report (bool): Option to capture chktex's console output into a html file.
         create_md_summary (bool): Option to transform chktex's notifications to a md-report file.
-        summary_file (SummaryMdFile): summary file object where are notifications are written (md-file)
-
-    Returns:
-        void.
+        summary_file (SummaryMdFile | None): summary file object where are notifications are written (md-file)
 
     """
     # Retrieve the value of GITHUB_WORKSPACE
@@ -175,7 +180,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
     # Perform linting and save console output to html-file
     if create_zipped_report:
         # report_folder = "" # set manually if required to run locally
-        report_folder = os.getenv("LINT_REPORT_FOLDER")
+        report_folder = str(os.getenv("LINT_REPORT_FOLDER"))
         log.info(f"report_folder: {report_folder}")
 
         # Create the directory if it doesn't exist
@@ -200,7 +205,7 @@ def use_chktex(tex_file_path, create_zipped_report: bool, create_md_summary: boo
             analize_report(base_dir, command, tex_file_path, summary_file)
 
 
-def str_to_bool(value):
+def str_to_bool(value: str) -> bool:
     """Performs type check if given value (given as str) is a bool"""
     if value.lower() in {"false", "f", "0", "no", "n"}:
         return False
@@ -212,7 +217,7 @@ def str_to_bool(value):
     raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
 
 
-def main():
+def main() -> None:
     # Define the logger format
     LOG_LEVEL = log.DEBUG
     log.basicConfig(format="%(levelname)s: %(message)s", level=LOG_LEVEL)
@@ -245,17 +250,18 @@ def main():
     args.workdir = Path(args.workdir)
 
     config_file = Config(args)
-    create_zipped_report = args.lint_pr_comment_with_zipped_report
+    create_zipped_report: bool = args.lint_pr_comment_with_zipped_report
     log.info(f"lint_pr_comment_with_zipped_report is set: {create_zipped_report}")
-    create_md_summary = args.lint_summary
+    create_md_summary: bool = args.lint_summary
     log.info(f"create_md_summary is set: {create_md_summary}")
     log.info(f"Added/Modified tex-file: {args.changedfiles}")
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths = [p for p in args.changedfiles.split(",") if config_file.active_semester in p]
+    filtered_paths: list[str] = [p for p in args.changedfiles.split(",") if config_file.active_semester in p]
     log.info(f"Changed tex-files from {config_file.active_semester}: {filtered_paths}")
 
     # Perform spell-check and provide result depending on lint_pr_comment_with_zipped_report and lint_summary
+    summary_file: SummaryMdFile | None
     if create_md_summary:
         summary_file = SummaryMdFile("lint_summary.md", len(filtered_paths))
     else:
@@ -264,13 +270,13 @@ def main():
         if not any(path in s for s in already_checked_files):
             use_chktex(path, create_zipped_report, create_md_summary, summary_file)
 
-    if create_md_summary:
+    if summary_file is not None:
         summary_file.add_details_summary_end()
 
-    # Append the environment variable to GITHUB_ENV
-    with open(os.getenv("GITHUB_ENV"), "a") as env_file:
+    # append the environment variable to GITHUB_ENV
+    gh_env = str(os.getenv("GITHUB_ENV"))
+    with open(gh_env, "a") as env_file:
         env_file.write(f"TOTAL_LINT_WARNINGS_ZIP={nr_of_total_warnings_for_zip}\n")
-    with open(os.getenv("GITHUB_ENV"), "a") as env_file:
         env_file.write(f"TOTAL_LINT_WARNINGS_REPORT={nr_of_total_warnings_for_md_file}\n")
 
 

@@ -6,16 +6,17 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import requests
 from filelock import FileLock
-from github import Github
+from github import Auth, Github
 
-from config import Config
-from summary_md_file import SummaryMdFile
-from tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
+from .config import Config
+from .summary_md_file import SummaryMdFile
+from .tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
 
-already_checked_files = set()
+already_checked_files: set[str] = set()
 nr_of_total_warnings = 0
 choices = {
     "zip_console_report_opt": "ZIPP_CONSOLE_REPORT",
@@ -43,37 +44,34 @@ class SpellingNotification:
         self.suggestions = suggestions
         self.message_and_suggestions_mixed = f"{message}{suggestions}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"SpellingNotification(file={self.file}, type={self.type}, line={self.line}, column={self.column}, "
             f" message={self.message}, code_snippet={self.code_snippet}, suggestions={self.suggestions})"
         )
 
 
-def post_pr_comments(notifications: list[SpellingNotification]):
+def post_pr_comments(notifications: list[SpellingNotification]) -> None:
     """Posts spell-check notifications (by ltex) as PR-review comments using PyGit
 
     Args:
         notifications: List[SpellingNotification]
 
-    Returns:
-        void
-
     """
     # Authenticate to GitHub
-    token = os.getenv("GITHUB_TOKEN")
-    g = Github(token)
+    token = str(os.getenv("GITHUB_TOKEN"))
+    g = Github(auth=Auth.Token(token))
 
     # Retrieve the repository and pull request
-    repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
+    repo = g.get_repo(str(os.getenv("GITHUB_REPOSITORY")))
     log.info(f"repo: {repo}")
-    pr_number = os.getenv("GITHUB_REF").split("/")
+    pr_number = str(os.getenv("GITHUB_REF")).split("/")
     log.info(f"pr_number: {pr_number}")
     pr = repo.get_pull(int(pr_number[-2]))
 
     # Fetch the file's diff
     file_diff = next((f for f in pr.get_files() if f.filename == notifications[0].file), None)
-    log.info(f"diff pr.get_files: {file_diff.raw_data}")
+    log.info(f"diff pr.get_files: {file_diff.raw_data if file_diff else 'No diff found'}")
 
     response = requests.get(pr.diff_url)
     log.info(f"response: {response.status_code}, {response.text}")
@@ -107,7 +105,7 @@ def post_pr_comments(notifications: list[SpellingNotification]):
     g.close()
 
 
-def line_is_in_diff(line, changedlines):
+def line_is_in_diff(line: int, changedlines: list[int]) -> bool:
     """Checks if a line (nr) is in the diff.
 
     Args:
@@ -125,7 +123,9 @@ def line_is_in_diff(line, changedlines):
     return line_in_diff
 
 
-def analize_report(option, base_dir, command, changedlines):
+def analize_report(
+    option: str, base_dir: str, command: str, changedlines: list[int] | None
+) -> list[SpellingNotification]:
     """Performs spell-check (with ltex) on specified tex file,
     IF option == choices['comment_in_code_and_make_report_opt']:
         posts resulting ltex-warnings/messages/errors (notifications) as PR-review-comments,
@@ -133,10 +133,10 @@ def analize_report(option, base_dir, command, changedlines):
     collects the remaining notifications for later convertion to report (md-file).
 
     Args:
-        option (str): one of the options of choices (see global variable "choices").
-        base_dir (str): Path of repo base directory.
-        command (str): ltex command to perform spell-check on a specific ltex file, considering a ltex-config file
-        changedlines (List(int)): List of line nr. of ltex file, to be analysed, in diff.
+        option (str) : one of the options of choices (see global variable "choices").
+        base_dir (str) : Path of repo base directory.
+        command (str) : ltex command to perform spell-check on a specific ltex file, considering a ltex-config file
+        changedlines (list(int) | None) : List of line nr. of ltex file, to be analysed, in diff.
 
     Returns:
         List(SpellingNotifications): Collection of remaining notifications
@@ -157,8 +157,11 @@ def analize_report(option, base_dir, command, changedlines):
             lines = output.split("\n")
 
             # Run over lines of raw ltex-report and parse warnings/errors/messages into objects SpellingNotification
-            files = set()
-            notifications = {"notifications_to_comment": [], "notifications_to_report": []}
+            files: set[str] = set()
+            notifications: dict[str, list[SpellingNotification]] = {
+                "notifications_to_comment": [],
+                "notifications_to_report": [],
+            }
             i = 0
             while i < len(lines):
                 first_line = lines[i]
@@ -189,8 +192,10 @@ def analize_report(option, base_dir, command, changedlines):
                             suggestions = f"{suggestions}\n{lines[i + step].strip()}"
                             step = step + 1
 
-                        if option == choices["comment_in_code_and_make_report_opt"] and line_is_in_diff(
-                            line, changedlines
+                        if (
+                            option == choices["comment_in_code_and_make_report_opt"]
+                            and changedlines
+                            and line_is_in_diff(line, changedlines)
                         ):
                             # Merge multiple notifications for one line in tex file into one SpellingNotification
                             # to create one PR-review-comment
@@ -231,7 +236,7 @@ def analize_report(option, base_dir, command, changedlines):
             return notifications["notifications_to_report"]
 
 
-def clean_up_data(data, changed_files_paths):
+def clean_up_data(data: dict[str, Any], changed_files_paths: list[str]) -> list[dict[str, Any]]:
     """Cleans up "raw" changed files information from diff (action) to only filter out
     AddedLines in tex files of interest (in our case changed files).
 
@@ -244,9 +249,9 @@ def clean_up_data(data, changed_files_paths):
 
     """
     filtered_data = [entry for entry in data["files"] if entry["path"] in changed_files_paths]
-    cleaned_up_data = []
+    cleaned_up_data: list[dict[str, Any]] = []
     for entry in filtered_data:
-        changed_lines = []
+        changed_lines: list[Any] = []
         for chunk in entry["chunks"]:
             for change in chunk["changes"]:
                 if change["type"] == "AddedLine":  # ignore changes about DeletedLine, UnchangedLine
@@ -255,7 +260,7 @@ def clean_up_data(data, changed_files_paths):
     return cleaned_up_data
 
 
-def use_ltex(tex_file_path, option, changedlines):
+def use_ltex(tex_file_path: str, option: str, changedlines: list[int] | None) -> list[SpellingNotification] | None:
     """Performs spell-check on the tex file specified,
     the resulting ltex-warnings/messages/errors (notifications) will be provided, depending on option:
         as captured-console-output in html or
@@ -263,9 +268,9 @@ def use_ltex(tex_file_path, option, changedlines):
         as PR-review-comments (if line where notification is situated is in diff).
 
     Args:
-        tex_file_path (str): Path to tex file to be spell-checked.
-        option (str): one of the options of choices (see global variable 'choices').
-        changedlines (List(int)): line nr. of file to be spell-checked, in diff.
+        tex_file_path (str) : Path to tex file to be spell-checked.
+        option (str) : one of the options of choices (see global variable 'choices').
+        changedlines (list(int) | None) : line nr. of file to be spell-checked, in diff.
 
     Returns:
         List(SpellingNotification): if option != choices['zip_console_report_opt'],
@@ -293,7 +298,7 @@ def use_ltex(tex_file_path, option, changedlines):
 
     if option == choices["zip_console_report_opt"]:
         # report_folder = ".github/scripts/test_exercise_files/ltex_reports" # for local run
-        report_folder = os.getenv("SPELLING_REPORT_FOLDER")
+        report_folder = str(os.getenv("SPELLING_REPORT_FOLDER"))
         log.info(f"report_folder: {report_folder}")
 
         # Create the directory if it doesn't exist
@@ -311,27 +316,25 @@ def use_ltex(tex_file_path, option, changedlines):
             nr_of_total_warnings += count_total_warnings(
                 base_dir, report_folder, tex_file_path, pattern, for_ltex_purposes=True
             )
-    else:
-        command = f"{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}"
-        return analize_report(option, base_dir, command, changedlines)
+        return None
+
+    command = f"{ltex_path} --client-configuration={config_file_abs_path} {tex_file_abs_path}"
+    return analize_report(option, base_dir, command, changedlines)
 
 
-def delete_old_comments_in_changed_files(filtered_paths):
+def delete_old_comments_in_changed_files(filtered_paths: list[str]) -> None:
     """Deletes all PR-review-comments in the files of interest,
     to avoid multiple PR-review-comments per line due to later comment-addition by the spell-checking process
 
     Args:
         filtered_paths (List(str)): List of paths to files of interest (to be spell-checked later).
 
-    Returns:
-        void.
-
     """
     # Delete all old comments
     token = os.getenv("GITHUB_TOKEN")
     g = Github(token)
-    repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
-    pr_number = os.getenv("GITHUB_REF").split("/")
+    repo = g.get_repo(str(os.getenv("GITHUB_REPOSITORY")))
+    pr_number = str(os.getenv("GITHUB_REF")).split("/")
     pr = repo.get_pull(int(pr_number[-2]))
     review_comments = pr.get_review_comments()
     for comment in review_comments:
@@ -341,7 +344,7 @@ def delete_old_comments_in_changed_files(filtered_paths):
     g.close()
 
 
-def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
+def comment_in_code_and_make_report_opt(option: str, filtered_paths: list[str], changedlines: str) -> None:
     """Performs spell-check (with ltex) on specified tex files,
     posts resulting ltex-warnings/messages/errors (notifications) as PR-review-comments,
     if respective line, where ltex-notification appears, is in diff and
@@ -352,9 +355,6 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
         filtered_paths (List(str)): List of paths to tex files to be spell-checked.
         changedlines (str): Path to changed files information of diff
                             (created by another action GrantBirki/git-diff-action@v2.8.0)
-
-    Returns:
-        void.
 
     """
     summary_file = SummaryMdFile("spell_check_report.md", len(filtered_paths), is_complementary_to_code_comments=True)
@@ -371,13 +371,14 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
 
     log.info(f"Changed lines are: {changed_files}")
     for changed_file in changed_files:
-        if not any(changed_file in s for s in already_checked_files):
-            notifications_not_in_diff = use_ltex(changed_file["path"], option, changed_file["changed_lines"])
+        file_path = changed_file["path"]
+        if file_path not in already_checked_files:
+            notifications_not_in_diff = use_ltex(file_path, option, changed_file["changed_lines"])
             # log.info(f'It is time to report by md: {notifications_not_in_diff}')
 
             # Write report for warnings outside diff to summary md file
             if notifications_not_in_diff is not None:
-                summary_file.add_overview_line(changed_file["path"], 0, len(notifications_not_in_diff), 0)
+                summary_file.add_overview_line(file_path, 0, len(notifications_not_in_diff), 0)
 
                 for notification in notifications_not_in_diff:
                     summary_file.add_notification_entry(notification)
@@ -387,7 +388,7 @@ def comment_in_code_and_make_report_opt(option, filtered_paths, changedlines):
     log.info("Report finnished.")
 
 
-def make_md_report_without_comments(option, filtered_paths):
+def make_md_report_without_comments(option: str, filtered_paths: list[str]) -> None:
     """Performs spell-check (with ltex) on specified tex files,
     collects the ltex-notifications (warnings/messages/errors) to then write them to a report (md-file)
     for later use as GITHUB_STEP_SUMMARY or PR-comment posting.
@@ -397,14 +398,11 @@ def make_md_report_without_comments(option, filtered_paths):
         option (str): one of the options of choices (see global variable "choices").
         filtered_paths (List(str)): List of paths to tex files to be spell-checked.
 
-    Returns:
-        void.
-
     """
     summary_file = SummaryMdFile("spell_check_report.md", len(filtered_paths))
 
     for path in filtered_paths:
-        if not any(path in s for s in already_checked_files):
+        if path in already_checked_files:
             notifications = use_ltex(path, option, None)
 
             if notifications is not None:
@@ -422,7 +420,7 @@ def make_md_report_without_comments(option, filtered_paths):
     log.info("Report finnished.")
 
 
-def main():
+def main() -> None:
     # Define the logger format
     LOG_LEVEL = log.DEBUG
     log.basicConfig(format="%(levelname)s: %(message)s", level=LOG_LEVEL)
@@ -481,7 +479,7 @@ def main():
     # Perform spell-check and provide result depending on args.option
     if args.option == choices["zip_console_report_opt"]:
         for path in filtered_paths:
-            if not any(path in s for s in already_checked_files):
+            if path not in already_checked_files:
                 use_ltex(path, args.option, None)
 
     elif args.option == choices["comment_in_code_and_make_report_opt"]:
@@ -492,7 +490,8 @@ def main():
         make_md_report_without_comments(args.option, filtered_paths)
 
     # Append the environment variable to GITHUB_ENV
-    with open(os.getenv("GITHUB_ENV"), "a") as env_file:
+    gh_env = str(os.getenv("GITHUB_ENV"))
+    with open(gh_env, "a") as env_file:
         env_file.write(f"TOTAL_SPELLINGCHECK_WARNINGS={nr_of_total_warnings}\n")
 
 

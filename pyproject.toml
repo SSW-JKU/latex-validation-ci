@@ -15,6 +15,7 @@ dependencies = [
   "beautifulsoup4>=4.15.0",
   "filelock>=4.2.10",
   "gh-action-integration-test",
+  "pygithub>=2.10.0",
   "requests>=2.34.2",
 ]
 
@@ -145,18 +146,12 @@ fail_under = 95
 # tooling dependencies
 known-extra = ["check-dependencies", "mypy", "pre-commit", "pytest-cov", "ruff"]
 # dependencies referred to via absolute imports
-known-missing = [
-  # TODO: re-evaluate those
-  "github.Github",
-  "config.Config",
-  "summary_md_file.SummaryMdFile",
-  "tex_checks_utils.count_total_warnings",
-  "tex_checks_utils.get_repo_and_action_path_env_variables",
-]
+known-missing = []
 
 [tool.check-dependencies.provides]
 # package alias
 beautifulsoup4 = "bs4"
+PyGithub = "github"
 
 [tool.uv.sources]
 gh-action-integration-test = { git = "https://github.com/skloibi/gh-action-integration-test.git" }
