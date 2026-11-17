@@ -1,8 +1,8 @@
 import os
 import threading
 
-from .lint_texs import LintNotification
-from .spell_check_texs import SpellingNotification
+from .lint_notification import LintNotification
+from .spell_checking_notification import SpellingNotification
 from .tex_checks_utils import get_repo_and_action_path_env_variables
 
 file_lock = threading.Lock()

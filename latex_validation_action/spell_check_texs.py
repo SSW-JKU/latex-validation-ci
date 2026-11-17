@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import argparse
 import json
-import logging as log
+import logging
 import os
 import re
 import subprocess
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -13,17 +14,22 @@ from filelock import FileLock
 from github import Auth, Github
 
 from .config import Config
+from .spell_checking_notification import SpellingNotification
 from .summary_md_file import SummaryMdFile
 from .tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
 
+log = logging.getLogger(__name__)
+
 already_checked_files: set[str] = set()
 nr_of_total_warnings = 0
-choices = {
-    "zip_console_report_opt": "ZIPP_CONSOLE_REPORT",
-    "comment_in_code_and_make_report_opt": "WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT",
-    "make_report_for_pr_comment_opt": "WRITE_MD_REPORT_AS_PR_COMMENT",
-    "make_report_for_github_summary_opt": "WRITE_MD_REPORT_AS_GITHUB_SUMMARY",
-}
+
+
+class Option(Enum):
+    zip_console_report_opt = "ZIPP_CONSOLE_REPORT"
+    comment_in_code_and_make_report_opt = "WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT"
+    make_report_for_pr_comment_opt = "WRITE_MD_REPORT_AS_PR_COMMENT"
+    make_report_for_github_summary_opt = "WRITE_MD_REPORT_AS_GITHUB_SUMMARY"
+
 
 CONFIG_FILE_REL_PATH = "ltex_config.txt"
 LOCK_DIR = f"{os.getenv('GITHUB_ACTION_PATH')}/tmp"
@@ -31,24 +37,6 @@ os.makedirs(LOCK_DIR, exist_ok=True)
 
 LOCK_FILE = os.path.join(LOCK_DIR, "ltex_cli_plus.lock")
 LOCK = FileLock(LOCK_FILE)
-
-
-class SpellingNotification:
-    def __init__(self, file: str, type: str, line: int, column: int, message: str, code_snippet: str, suggestions: str):
-        self.file = file
-        self.line = line
-        self.column = column
-        self.type = type
-        self.message = message
-        self.code_snippet = code_snippet
-        self.suggestions = suggestions
-        self.message_and_suggestions_mixed = f"{message}{suggestions}"
-
-    def __repr__(self) -> str:
-        return (
-            f"SpellingNotification(file={self.file}, type={self.type}, line={self.line}, column={self.column}, "
-            f" message={self.message}, code_snippet={self.code_snippet}, suggestions={self.suggestions})"
-        )
 
 
 def post_pr_comments(notifications: list[SpellingNotification]) -> None:
@@ -124,19 +112,19 @@ def line_is_in_diff(line: int, changedlines: list[int]) -> bool:
 
 
 def analize_report(
-    option: str, base_dir: str, command: str, changedlines: list[int] | None
+    option: Option, base_dir: str, command: str, changed_lines: list[int] | None
 ) -> list[SpellingNotification]:
     """Performs spell-check (with ltex) on specified tex file,
-    IF option == choices['comment_in_code_and_make_report_opt']:
+    IF option == comment_in_code_and_make_report_opt:
         posts resulting ltex-warnings/messages/errors (notifications) as PR-review-comments,
         if respective line, where ltex-notification appears, is in diff and
     collects the remaining notifications for later convertion to report (md-file).
 
     Args:
-        option (str) : one of the options of choices (see global variable "choices").
+        option (Option) : the chosen option
         base_dir (str) : Path of repo base directory.
         command (str) : ltex command to perform spell-check on a specific ltex file, considering a ltex-config file
-        changedlines (list(int) | None) : List of line nr. of ltex file, to be analysed, in diff.
+        changed_lines (list(int) | None) : List of line nr. of ltex file, to be analysed, in diff.
 
     Returns:
         List(SpellingNotifications): Collection of remaining notifications
@@ -193,9 +181,9 @@ def analize_report(
                             step = step + 1
 
                         if (
-                            option == choices["comment_in_code_and_make_report_opt"]
-                            and changedlines
-                            and line_is_in_diff(line, changedlines)
+                            option == Option.comment_in_code_and_make_report_opt
+                            and changed_lines
+                            and line_is_in_diff(line, changed_lines)
                         ):
                             # Merge multiple notifications for one line in tex file into one SpellingNotification
                             # to create one PR-review-comment
@@ -260,7 +248,7 @@ def clean_up_data(data: dict[str, Any], changed_files_paths: list[str]) -> list[
     return cleaned_up_data
 
 
-def use_ltex(tex_file_path: str, option: str, changedlines: list[int] | None) -> list[SpellingNotification] | None:
+def use_ltex(tex_file_path: str, option: Option, changedlines: list[int] | None) -> list[SpellingNotification] | None:
     """Performs spell-check on the tex file specified,
     the resulting ltex-warnings/messages/errors (notifications) will be provided, depending on option:
         as captured-console-output in html or
@@ -269,11 +257,11 @@ def use_ltex(tex_file_path: str, option: str, changedlines: list[int] | None) ->
 
     Args:
         tex_file_path (str) : Path to tex file to be spell-checked.
-        option (str) : one of the options of choices (see global variable 'choices').
+        option (Option) : the chosen option
         changedlines (list(int) | None) : line nr. of file to be spell-checked, in diff.
 
     Returns:
-        List(SpellingNotification): if option != choices['zip_console_report_opt'],
+        List(SpellingNotification): if option != zip_console_report_opt,
                                     returns list of notifications to be later written to the md-report-file.
 
     """
@@ -296,7 +284,7 @@ def use_ltex(tex_file_path: str, option: str, changedlines: list[int] | None) ->
     parts[-1] = f"{filename_without_extension}_report.html"
     tex_file_path = "-".join(parts)
 
-    if option == choices["zip_console_report_opt"]:
+    if option == Option.zip_console_report_opt:
         # report_folder = ".github/scripts/test_exercise_files/ltex_reports" # for local run
         report_folder = str(os.getenv("SPELLING_REPORT_FOLDER"))
         log.info(f"report_folder: {report_folder}")
@@ -344,16 +332,16 @@ def delete_old_comments_in_changed_files(filtered_paths: list[str]) -> None:
     g.close()
 
 
-def comment_in_code_and_make_report_opt(option: str, filtered_paths: list[str], changedlines: str) -> None:
+def comment_in_code_and_make_report_opt(option: Option, filtered_paths: list[str], changedlines: Path) -> None:
     """Performs spell-check (with ltex) on specified tex files,
     posts resulting ltex-warnings/messages/errors (notifications) as PR-review-comments,
     if respective line, where ltex-notification appears, is in diff and
     collects the remaining notifications to then write them to a report (md-file).
 
     Args:
-        option (str): one of the options of choices (see global variable "choices").
+        option (Option): the chosen option.
         filtered_paths (List(str)): List of paths to tex files to be spell-checked.
-        changedlines (str): Path to changed files information of diff
+        changedlines (Path): Path to changed files information of diff
                             (created by another action GrantBirki/git-diff-action@v2.8.0)
 
     """
@@ -388,14 +376,14 @@ def comment_in_code_and_make_report_opt(option: str, filtered_paths: list[str], 
     log.info("Report finnished.")
 
 
-def make_md_report_without_comments(option: str, filtered_paths: list[str]) -> None:
+def make_md_report_without_comments(option: Option, filtered_paths: list[str]) -> None:
     """Performs spell-check (with ltex) on specified tex files,
     collects the ltex-notifications (warnings/messages/errors) to then write them to a report (md-file)
     for later use as GITHUB_STEP_SUMMARY or PR-comment posting.
     (PR-comment (comment in PR) != PR-review-comment (comment in PR in line of a file))
 
     Args:
-        option (str): one of the options of choices (see global variable "choices").
+        option (Option): the chosen option.
         filtered_paths (List(str)): List of paths to tex files to be spell-checked.
 
     """
@@ -420,80 +408,46 @@ def make_md_report_without_comments(option: str, filtered_paths: list[str]) -> N
     log.info("Report finnished.")
 
 
-def main() -> None:
-    # Define the logger format
-    LOG_LEVEL = log.DEBUG
-    log.basicConfig(format="%(levelname)s: %(message)s", level=LOG_LEVEL)
-
+def spell_check_tex(
+    changed_files: list[str], workdir: Path, option: Option, active_semester: str, changed_lines: Path | None
+) -> None:
     # Define input argument parser
     log.info("Start check.")
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-cf", "--changedfiles", required=True, help="Paths to changed files to be spell-checked.")
-    parser.add_argument(
-        "-o",
-        "--option",
-        choices=[
-            choices["zip_console_report_opt"],
-            choices["comment_in_code_and_make_report_opt"],
-            choices["make_report_for_pr_comment_opt"],
-            choices["make_report_for_github_summary_opt"],
-        ],
-        required=True,
-        help="Choose between 4 options: ZIPP_CONSOLE_REPORT to capture console output to html-report, "
-        "WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT: writes pr-review-comments directly in code "
-        "(if in diff) and reports the rest as .md-file"
-        "WRITE_MD_REPORT_AS_PR_COMMENT: writes all warnings as md-file and posts it as pr-comment"
-        "WRITE_MD_REPORT_AS_GITHUB_SUMMARY: writes all warnings as md-file and posts it "
-        "as GITHUB_SUMMARY",
-    )
-    parser.add_argument(
-        "-cl",
-        "--changedlines",
-        help="Path to the diff-JSON file from action GrantBirki/git-diff-action@v2.8.0. "
-        "(required for option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT)",
-    )
-    parser.add_argument(
-        "-c", "--config", required=True, help="Config for CI/CD pipeline, likely .lecture-build-ci.json"
-    )
-    parser.add_argument("-wd", "--workdir", required=True, help="Working directory, likely repo root.")
-    args = parser.parse_args()
-    args.workdir = Path(args.workdir)
 
-    log.info(f"Chosen option: {args.option}")
-    if args.option == choices["comment_in_code_and_make_report_opt"] and (
-        not args.changedlines or not os.getenv("GITHUB_TOKEN")
-    ):
+    log.info(f"Chosen option: {option}")
+    if option == Option.comment_in_code_and_make_report_opt and (not changed_lines or not os.getenv("GITHUB_TOKEN")):
         raise argparse.ArgumentTypeError(
             "When setting --option to WRITE_PR_COMMENTS_AND_MD_REPORT, changedlines and the env-variable GITHUB_TOKEN "
             "must be set."
         )
 
-    config_file = Config(args)
-    log.info(f"Added/Modified tex-file: {args.changedfiles}")
-    log.info(f"Added/Modified tex-file lines: {args.changedlines}")
+    config = Config(active_semester, workdir)
+    log.info(f"Added/Modified tex-file: {changed_files}")
+    log.info(f"Added/Modified tex-file lines: {changed_lines}")
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths = [p for p in args.changedfiles.split(",") if config_file.active_semester in p]
-    log.info(f"Changed tex-files from {config_file.active_semester}: {filtered_paths}")
+    filtered_paths = [p for p in changed_files if config.active_semester in p]
+    log.info(f"Changed tex-files from {config.active_semester}: {filtered_paths}")
 
     # Perform spell-check and provide result depending on args.option
-    if args.option == choices["zip_console_report_opt"]:
+    if option == Option.zip_console_report_opt:
         for path in filtered_paths:
             if path not in already_checked_files:
-                use_ltex(path, args.option, None)
+                use_ltex(path, option, None)
 
-    elif args.option == choices["comment_in_code_and_make_report_opt"]:
-        comment_in_code_and_make_report_opt(args.option, filtered_paths, args.changedlines)
+    elif option == Option.comment_in_code_and_make_report_opt:
+        if changed_lines is None or not os.getenv("GITHUB_TOKEN"):
+            raise argparse.ArgumentTypeError(
+                "When setting --option to WRITE_PR_COMMENTS_AND_MD_REPORT, changedlines and the env-variable GITHUB_TOKEN "
+                "must be set."
+            )
+        comment_in_code_and_make_report_opt(option, filtered_paths, changed_lines)
 
     # workflow: choices['make_report_for_pr_comment_opt'] or choices['make_report_for_github_summary_opt']
     else:
-        make_md_report_without_comments(args.option, filtered_paths)
+        make_md_report_without_comments(option, filtered_paths)
 
     # Append the environment variable to GITHUB_ENV
     gh_env = str(os.getenv("GITHUB_ENV"))
     with open(gh_env, "a") as env_file:
         env_file.write(f"TOTAL_SPELLINGCHECK_WARNINGS={nr_of_total_warnings}\n")
-
-
-if __name__ == "__main__":
-    main()

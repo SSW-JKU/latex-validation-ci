@@ -193,7 +193,7 @@ runs:
         else
           CREATE_MD_REPORT="false"
         fi
-        python3 ${{ github.action_path }}/latex_validation_action/lint_texs.py --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}" --lint_summary "$CREATE_MD_REPORT"
+        validate lint --changed_files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}" --lint-summary "$CREATE_MD_REPORT"
 
     # ******************** NOTE: Following section has been scratched for the time being, as capturing the raw console output of chktex does not provide any colorcoding or any other immediate benefit (without being processed)
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------
@@ -328,7 +328,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_zipped_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell_check_texs.py --option ZIPP_CONSOLE_REPORT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        validate spell-check --option ZIPP_CONSOLE_REPORT --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}"
 
     # Upload the ZIP file as an artifact
     - name: Upload ZIP artifact (captured ltex console-output (color-coded))
@@ -369,7 +369,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell_check_texs.py --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        validate spell-check --option WRITE_MD_REPORT_AS_GITHUB_SUMMARY --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}"
 
     - name: Upload to GITHUB_STEP_SUMMARY (spelling check)
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_link_to_GITHUB_SUMMARY == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
@@ -402,7 +402,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report == 'true' }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/latex_validation_action/spell_check_texs.py --option WRITE_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --workdir "${{ inputs.working_directory }}"
+        validate spell-check --option WRITE_MD_REPORT_AS_PR_COMMENT --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}"
 
     - name: Check file length (ltex md-report)
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report == 'true' && env.TOTAL_SPELLINGCHECK_WARNINGS > 0 }}
@@ -455,7 +455,7 @@ runs:
       if: ${{ inputs.changed_files != '' && inputs.spellcheck_comment_with_md_report_and_comment_in_code == 'true' }}
       shell: bash
       run: |
-        python3 .github/scripts/test_exercise_files/spell_check_texs.py --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changedfiles '${{ steps.set-changed-files.outputs.changed_files }}' --config "${{ inputs.working_directory }}/${{ inputs.build_config }}" --changedlines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}" --workdir "${{ inputs.working_directory }}"
+        validate spell-check --option WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}" --changed-lines "$GITHUB_WORKSPACE/${{ steps.git-diff-action.outputs.json-diff-path }}"
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 

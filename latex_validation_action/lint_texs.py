@@ -1,14 +1,16 @@
-#!/usr/bin/env python
 import argparse
-import logging as log
+import logging
 import os
 import re
 import subprocess
 from pathlib import Path
 
 from .config import Config
+from .lint_notification import LintNotification
 from .summary_md_file import SummaryMdFile
 from .tex_checks_utils import count_total_warnings, get_repo_and_action_path_env_variables
+
+log = logging.getLogger(__name__)
 
 already_checked_files: set[str] = set()
 nr_of_total_warnings_for_zip: int = 0
@@ -16,27 +18,6 @@ nr_of_total_warnings_for_md_file: int = 0
 
 # CHKTEX_EXEC_REL_PATH = 'chktex'
 CHKTEX_CONFIG_FILE_REL_PATH = "chktexrc.in"
-
-
-class LintNotification:
-    file: str
-    type: str
-    line: int
-    message: str
-    code_snippet: str
-
-    def __init__(self, file: str, type: str, line: int, message: str, code_snippet: str) -> None:
-        self.file = file
-        self.type = type
-        self.line = line
-        self.message = message
-        self.code_snippet = code_snippet
-
-    def __repr__(self) -> str:
-        return (
-            f"LintNotification(file={self.file},"
-            f"type={self.type}, line={self.line}, message={self.message}, code_snippet={self.code_snippet})"
-        )
 
 
 def find_line_number(filename: str | Path, target_string: str) -> int | None:
@@ -217,47 +198,24 @@ def str_to_bool(value: str) -> bool:
     raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
 
 
-def main() -> None:
-    # Define the logger format
-    LOG_LEVEL = log.DEBUG
-    log.basicConfig(format="%(levelname)s: %(message)s", level=LOG_LEVEL)
+def lint_tex(
+    changed_files: list[str],
+    workdir: Path,
+    active_semester: str,
+    create_zipped_report: bool,
+    create_md_summary: bool,
+) -> None:
 
     # Define input argument parser
     log.info("Start check.")
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-cf", "--changedfiles", type=str, required=True, help="Paths to changed files to be linted.")
-    parser.add_argument(
-        "-c", "--config", required=True, help="Config for CI/CD pipeline, likely .lecture-build-ci.json"
-    )
-    parser.add_argument("-wd", "--workdir", required=True, help="Working directory, likely repo root.")
-    parser.add_argument(
-        "--lint_pr_comment_with_zipped_report",
-        type=str_to_bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="Feature: zip report and post download link as PR-comment",
-    )
-    parser.add_argument(
-        "--lint_summary",
-        type=str_to_bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="Feature: Write lint report as summary in md-format.",
-    )
-    args = parser.parse_args()
-    args.workdir = Path(args.workdir)
 
-    config_file = Config(args)
-    create_zipped_report: bool = args.lint_pr_comment_with_zipped_report
+    config_file = Config(active_semester, workdir)
     log.info(f"lint_pr_comment_with_zipped_report is set: {create_zipped_report}")
-    create_md_summary: bool = args.lint_summary
     log.info(f"create_md_summary is set: {create_md_summary}")
-    log.info(f"Added/Modified tex-file: {args.changedfiles}")
+    log.info(f"Added/Modified tex-file: {changed_files}")
 
     # Filter paths that contain the specific directory defined in config in their path
-    filtered_paths: list[str] = [p for p in args.changedfiles.split(",") if config_file.active_semester in p]
+    filtered_paths: list[str] = [p for p in changed_files if config_file.active_semester in p]
     log.info(f"Changed tex-files from {config_file.active_semester}: {filtered_paths}")
 
     # Perform spell-check and provide result depending on lint_pr_comment_with_zipped_report and lint_summary
@@ -278,7 +236,3 @@ def main() -> None:
     with open(gh_env, "a") as env_file:
         env_file.write(f"TOTAL_LINT_WARNINGS_ZIP={nr_of_total_warnings_for_zip}\n")
         env_file.write(f"TOTAL_LINT_WARNINGS_REPORT={nr_of_total_warnings_for_md_file}\n")
-
-
-if __name__ == "__main__":
-    main()
