@@ -45,12 +45,3 @@ class Config:
         self.exercises = json_config["exercises"]
         self.exercises_entry_point = json_config["entryPoints"]["exercise"]
         self.lesson_entry_point = json_config["entryPoints"]["lesson"]
-
-    def determine_semester(self) -> int:
-        """Extract the semester number from the `active_semester` string.
-
-        Returns:
-            (int) The parsed semester number.
-
-        """
-        return int(self.active_semester[:2])
