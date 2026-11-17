@@ -99,7 +99,7 @@ jobs:
         # scenarios named *_failure_* are expected to fail the action
         continue-on-error: ${{ contains(matrix.scenario, '_failure_') }}
         with:
-          working_directory: "/tmp/test-locals/shootout_test/"
+          working_directory: "/tmp/test-locals/${{ matrix.scenario }}/"
           build_config: "config.json"
           changed_files: 25ST/Ex02/Aufgabe/exercise.tex,25ST/Ex02/Unterricht/lesson.tex,25ST/config.tex
 
