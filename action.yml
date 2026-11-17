@@ -111,27 +111,24 @@ runs:
         echo "Changed Files:"
         echo ${{ steps.set-changed-files.outputs.changed_files }}
 
-    # Create symbolic link for requirements.txt (https://github.com/actions/setup-python/issues/361#issuecomment-2530429607)
-    # to work around https://github.com/actions/setup-python/issues/361
-    - name: Create symbolic link for requirements.txt
-      run: ln -s ${{ github.action_path }}/requirements.txt action_requirements.txt
-      shell: bash
-    # install Python
     - name: Setup Python
-      if: ${{ inputs.changed_files != '' }}
       uses: actions/setup-python@v6
       with:
-        cache: "pip"
         python-version: ${{ inputs.python_version }}
-        cache-dependency-path: "**/action_requirements.txt"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.1
+      with:
+        enable-cache: true
+        cache-dependency-glob: "${{ github.action_path }}/uv.lock"
 
     - name: Install Python dependencies
-      if: ${{ inputs.changed_files != '' }}
       working-directory: ${{ github.action_path }}
       shell: bash
+      # export to requirements.txt to ensure locked dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade setuptools
+        uv export --frozen --no-dev --format requirements-txt > _action_requirements.txt
+        uv pip install --system -r _action_requirements.txt
 
     # install TeX live + install required dependencies
     - name: Setup TeX Live
