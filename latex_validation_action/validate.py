@@ -5,7 +5,7 @@ from typing import Annotated, Final
 import typer
 
 from .lint_texs import lint_tex
-from .spell_check_texs import Option
+from .spell_check_texs import Option, spell_check_tex
 
 app = typer.Typer()
 
@@ -13,10 +13,17 @@ LOG_LEVEL: Final = logging.DEBUG
 logging.basicConfig(format="%(levelname)s: %(message)s", level=LOG_LEVEL)
 
 
+def parse_comma_separated(value: str) -> list[str]:
+    return [value.strip() for value in value.split(",") if value.strip()]
+
+
 @app.command(help="Run linting on changed files")
 def lint(
     changed_files: Annotated[
-        list[str], typer.Option("--changed-files", "-cf", help="Paths to changed files to be linted")
+        list[str],
+        typer.Option(
+            "--changed-files", "-cf", help="Paths to changed files to be linted", parser=parse_comma_separated
+        ),
     ],
     workdir: Annotated[Path, typer.Option("--workdir", "-wd", help="Working directory, likely repo root")],
     active_semester: Annotated[str, typer.Option(help="Active semester, e.g. WS23")],
@@ -31,7 +38,10 @@ def lint(
 @app.command(name="spell-check", help="Run spell-checking on changed files")
 def spell_check(
     changed_files: Annotated[
-        list[str], typer.Option("--changed-files", "-cf", help="Paths to changed files to be linted")
+        list[str],
+        typer.Option(
+            "--changed-files", "-cf", help="Paths to changed files to be linted", parser=parse_comma_separated
+        ),
     ],
     option: Annotated[
         Option,
@@ -58,7 +68,7 @@ def spell_check(
         ),
     ] = None,
 ) -> None:
-    pass
+    spell_check_tex(changed_files, workdir, option, active_semester, changed_lines)
 
 
 if __name__ == "__main__":

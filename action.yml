@@ -188,12 +188,11 @@ runs:
         # chmod +x ${{ github.action_path }}/chktex/chktex
         # chmod +x ${{ github.action_path }}/chktexrc.in
 
+        args=()
         if [[ -n "${{ inputs.lint_pr_comment_with_link_to_GITHUB_SUMMARY }}" || -n "${{ inputs.lint_pr_comment_with_md_report }}" ]]; then
-          CREATE_MD_REPORT="true"
-        else
-          CREATE_MD_REPORT="false"
+          args+=("--lint-summary")
         fi
-        validate lint --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}" --lint-summary "$CREATE_MD_REPORT"
+        validate lint --changed-files '${{ steps.set-changed-files.outputs.changed_files }}' --active-semester 25ST --workdir "${{ inputs.working_directory }}" "${args[@]}"
 
     # ******************** NOTE: Following section has been scratched for the time being, as capturing the raw console output of chktex does not provide any colorcoding or any other immediate benefit (without being processed)
     # --------------------------------------- Create PR-comment with reports packaged as zip ---------------------------------------

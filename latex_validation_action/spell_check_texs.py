@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import subprocess
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +24,7 @@ already_checked_files: set[str] = set()
 nr_of_total_warnings = 0
 
 
-class Option(Enum):
+class Option(StrEnum):
     zip_console_report_opt = "ZIPP_CONSOLE_REPORT"
     comment_in_code_and_make_report_opt = "WRITE_PR_COMMENTS_AND_MD_REPORT_AS_PR_COMMENT"
     make_report_for_pr_comment_opt = "WRITE_MD_REPORT_AS_PR_COMMENT"
