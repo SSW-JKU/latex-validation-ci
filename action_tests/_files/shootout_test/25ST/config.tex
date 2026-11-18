@@ -1,0 +1,20 @@
+\documentclass[titlepage=false, headlines=2, headsepline, parskip=half, DIV=12]{scrartcl}
+
+\usepackage{scrlayer-scrpage}
+
+% if solutions have not been enabled before prelude, disable them
+\makeatletter
+\@ifundefined{ifsolutions}{
+  \newif\ifsolutions
+  \solutionsfalse
+}{}
+\makeatother
+
+\newcommand{\solution}[1]{
+  \ifsolutions
+  \clearpage
+  \section*{Lösung}
+  #1
+  \fi
+}
+
